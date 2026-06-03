@@ -15,7 +15,10 @@ describe('SaveStatus', () => {
   })
 
   it('ファイル選択中はファイル名と保存状態を表示する', () => {
-    useWorkspaceStore.setState({ current_path: 'docs/a.md', save_status: 'saved' })
+    useWorkspaceStore.setState({
+      current: { workspace_id: 'ws-1', path: 'docs/a.md' },
+      save_status: 'saved',
+    })
     render(<SaveStatus />)
     expect(screen.getByText('a.md')).toBeInTheDocument()
     expect(screen.getByText('保存済み')).toBeInTheDocument()

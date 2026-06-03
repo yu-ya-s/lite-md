@@ -19,11 +19,10 @@ describe('App', () => {
     // ストアを既知の状態へ。init はテストでは副作用を起こさないよう no-op にする
     useWorkspaceStore.setState({
       content: '',
-      current_path: null,
+      current: null,
       save_status: 'idle',
       is_supported: false,
-      tree: [],
-      folder_name: null,
+      workspaces: [],
       can_restore: false,
       init: async () => {},
     })
@@ -71,5 +70,28 @@ describe('App', () => {
   it('エディタとプレビューの間に区切り（separator）がある', () => {
     render(<App />)
     expect(screen.getByRole('separator')).toBeInTheDocument()
+  })
+
+  it('区切りのドラッグでエディタ幅の比率が変わる', () => {
+    render(<App />)
+    const separator = screen.getByRole('separator')
+    const main = separator.closest('.app__main') as HTMLElement
+    main.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        width: 1000,
+        height: 0,
+        right: 1000,
+        bottom: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    fireEvent.pointerDown(separator)
+    fireEvent.pointerMove(window, { clientX: 300 })
+    expect(main.style.getPropertyValue('--editor-fr')).toBe('0.3fr')
+    fireEvent.pointerUp(window)
   })
 })

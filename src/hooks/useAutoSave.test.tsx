@@ -14,9 +14,14 @@ describe('useAutoSave', () => {
     vi.useRealTimers()
   })
 
-  it('current_path ありで dirty なら遅延後に save を呼ぶ', () => {
+  it('ファイル選択中で dirty なら遅延後に save を呼ぶ', () => {
     const save = vi.fn(async () => {})
-    useWorkspaceStore.setState({ current_path: 'a.md', save_status: 'saved', content: 'x', save })
+    useWorkspaceStore.setState({
+      current: { workspace_id: 'ws-1', path: 'a.md' },
+      save_status: 'saved',
+      content: 'x',
+      save,
+    })
     renderHook(() => useAutoSave(500))
 
     act(() => {
@@ -29,9 +34,9 @@ describe('useAutoSave', () => {
     expect(save).toHaveBeenCalledTimes(1)
   })
 
-  it('current_path が無ければ save を呼ばない', () => {
+  it('ファイル未選択なら save を呼ばない', () => {
     const save = vi.fn(async () => {})
-    useWorkspaceStore.setState({ current_path: null, save_status: 'idle', content: 'x', save })
+    useWorkspaceStore.setState({ current: null, save_status: 'idle', content: 'x', save })
     renderHook(() => useAutoSave(500))
 
     act(() => {

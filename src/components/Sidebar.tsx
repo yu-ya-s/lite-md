@@ -35,12 +35,11 @@ type SidebarProps = {
 
 export function Sidebar({ collapsed = false }: SidebarProps) {
   const is_supported = useWorkspaceStore((s) => s.is_supported)
-  const folder_name = useWorkspaceStore((s) => s.folder_name)
-  const tree = useWorkspaceStore((s) => s.tree)
+  const workspaces = useWorkspaceStore((s) => s.workspaces)
   const can_restore = useWorkspaceStore((s) => s.can_restore)
   const error = useWorkspaceStore((s) => s.error)
-  const open_folder = useWorkspaceStore((s) => s.open_folder)
-  const restore_folder = useWorkspaceStore((s) => s.restore_folder)
+  const add_folder = useWorkspaceStore((s) => s.add_folder)
+  const restore_folders = useWorkspaceStore((s) => s.restore_folders)
   const close_folder = useWorkspaceStore((s) => s.close_folder)
 
   return (
@@ -51,14 +50,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       {is_supported ? (
         <>
           <div className="sidebar__actions">
-            <button type="button" className="btn" onClick={() => void open_folder()}>
-              フォルダを開く
+            <button type="button" className="btn" onClick={() => void add_folder()}>
+              フォルダを追加
             </button>
             {can_restore && (
               <button
                 type="button"
                 className="btn btn--subtle"
-                onClick={() => void restore_folder()}
+                onClick={() => void restore_folders()}
               >
                 前回のフォルダを開く
               </button>
@@ -67,21 +66,23 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
           {error && <p className="sidebar__error">{error}</p>}
 
-          {folder_name ? (
-            <>
-              <div className="sidebar__folder">
-                <span className="sidebar__folder-name">📁 {folder_name}</span>
-                <button
-                  type="button"
-                  className="sidebar__close"
-                  aria-label="フォルダを閉じる"
-                  onClick={() => void close_folder()}
-                >
-                  ✕
-                </button>
+          {workspaces.length > 0 ? (
+            workspaces.map((ws) => (
+              <div key={ws.id} className="workspace">
+                <div className="sidebar__folder">
+                  <span className="sidebar__folder-name">📁 {ws.name}</span>
+                  <button
+                    type="button"
+                    className="sidebar__close"
+                    aria-label={`${ws.name} を閉じる`}
+                    onClick={() => void close_folder(ws.id)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <FileTree workspace_id={ws.id} nodes={ws.tree} />
               </div>
-              <FileTree nodes={tree} />
-            </>
+            ))
           ) : (
             <p className="app__placeholder">フォルダ未選択</p>
           )}

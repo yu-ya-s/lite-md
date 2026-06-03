@@ -12,7 +12,7 @@ export function useAutoSave(delay_ms = 800) {
 
   useEffect(() => {
     const state = useWorkspaceStore.getState()
-    if (state.current_path && state.save_status === 'dirty') {
+    if (state.current && state.save_status === 'dirty') {
       void state.save()
     }
   }, [debounced])

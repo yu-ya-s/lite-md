@@ -26,4 +26,11 @@ describe('Editor', () => {
     fireEvent.change(screen.getByTestId('cm-editor'), { target: { value: 'world' } })
     expect(on_change).toHaveBeenCalledWith('world')
   })
+
+  it('書式ツールバーのボタンを押してもエディタ未準備なら安全に無視する', () => {
+    render(<Editor value="hello" on_change={() => {}} />)
+    expect(() =>
+      fireEvent.click(screen.getByRole('button', { name: '太字 (Ctrl+B)' })),
+    ).not.toThrow()
+  })
 })

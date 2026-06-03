@@ -172,11 +172,15 @@ body {
   margin-bottom: 12px;
 }
 
+.workspace {
+  margin-bottom: 12px;
+}
+
 .sidebar__folder {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 4px 0 8px;
+  margin: 4px 0 6px;
   font-size: 13px;
   font-weight: 600;
 }

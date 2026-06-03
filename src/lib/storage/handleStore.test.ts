@@ -1,17 +1,18 @@
-import { save_handle, load_handle, clear_handle } from './handleStore'
+import { save_handles, load_handles } from './handleStore'
 
 // setup.ts で fake-indexeddb/auto を読み込み済み
 describe('handleStore', () => {
-  it('保存したハンドルを読み戻せる', async () => {
-    const fake = { name: 'my-folder', kind: 'directory' } as unknown as FileSystemDirectoryHandle
-    await save_handle(fake)
-    const loaded = await load_handle()
-    expect(loaded?.name).toBe('my-folder')
+  it('保存した複数ハンドルを読み戻せる', async () => {
+    await save_handles([
+      { name: 'folder-a' } as unknown as FileSystemDirectoryHandle,
+      { name: 'folder-b' } as unknown as FileSystemDirectoryHandle,
+    ])
+    const loaded = await load_handles()
+    expect(loaded.map((h) => h.name)).toEqual(['folder-a', 'folder-b'])
   })
 
-  it('clear 後は null を返す', async () => {
-    await save_handle({ name: 'x' } as unknown as FileSystemDirectoryHandle)
-    await clear_handle()
-    expect(await load_handle()).toBeNull()
+  it('空配列を保存すると空配列を返す', async () => {
+    await save_handles([])
+    expect(await load_handles()).toEqual([])
   })
 })

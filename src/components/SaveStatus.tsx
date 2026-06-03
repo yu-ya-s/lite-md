@@ -9,14 +9,14 @@ const LABELS: Record<SaveStatusValue, string> = {
 }
 
 export function SaveStatus() {
-  const current_path = useWorkspaceStore((s) => s.current_path)
+  const current = useWorkspaceStore((s) => s.current)
   const save_status = useWorkspaceStore((s) => s.save_status)
 
-  if (!current_path) {
+  if (!current) {
     return null
   }
 
-  const file_name = current_path.split('/').pop()
+  const file_name = current.path.split('/').pop()
 
   return (
     <span className="save-status">

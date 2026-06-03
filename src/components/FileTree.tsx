@@ -2,17 +2,17 @@ import { useState } from 'react'
 import { useWorkspaceStore } from '../store/workspaceStore'
 import type { DirectoryNode, FileNode, TreeNode } from '../lib/storage/types'
 
-function FileItem({ node }: { node: FileNode }) {
+function FileItem({ workspace_id, node }: { workspace_id: string; node: FileNode }) {
   const open_file = useWorkspaceStore((s) => s.open_file)
-  const current_path = useWorkspaceStore((s) => s.current_path)
-  const is_active = current_path === node.path
+  const current = useWorkspaceStore((s) => s.current)
+  const is_active = current?.workspace_id === workspace_id && current.path === node.path
 
   return (
     <li>
       <button
         type="button"
         className={`tree__file${is_active ? ' tree__file--active' : ''}`}
-        onClick={() => void open_file(node.path)}
+        onClick={() => void open_file(workspace_id, node.path)}
       >
         {node.name}
       </button>
@@ -20,7 +20,7 @@ function FileItem({ node }: { node: FileNode }) {
   )
 }
 
-function DirItem({ node }: { node: DirectoryNode }) {
+function DirItem({ workspace_id, node }: { workspace_id: string; node: DirectoryNode }) {
   const [open, set_open] = useState(true)
 
   return (
@@ -33,28 +33,28 @@ function DirItem({ node }: { node: DirectoryNode }) {
       >
         <span className="tree__caret">{open ? '▾' : '▸'}</span> {node.name}
       </button>
-      {open && <TreeList nodes={node.children} />}
+      {open && <TreeList workspace_id={workspace_id} nodes={node.children} />}
     </li>
   )
 }
 
-function TreeList({ nodes }: { nodes: TreeNode[] }) {
+function TreeList({ workspace_id, nodes }: { workspace_id: string; nodes: TreeNode[] }) {
   return (
     <ul className="tree__list">
       {nodes.map((node) =>
         node.kind === 'directory' ? (
-          <DirItem key={node.path} node={node} />
+          <DirItem key={node.path} workspace_id={workspace_id} node={node} />
         ) : (
-          <FileItem key={node.path} node={node} />
+          <FileItem key={node.path} workspace_id={workspace_id} node={node} />
         ),
       )}
     </ul>
   )
 }
 
-export function FileTree({ nodes }: { nodes: TreeNode[] }) {
+export function FileTree({ workspace_id, nodes }: { workspace_id: string; nodes: TreeNode[] }) {
   if (nodes.length === 0) {
     return <p className="app__placeholder">Markdownファイルがありません</p>
   }
-  return <TreeList nodes={nodes} />
+  return <TreeList workspace_id={workspace_id} nodes={nodes} />
 }

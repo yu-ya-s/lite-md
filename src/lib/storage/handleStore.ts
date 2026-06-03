@@ -1,9 +1,9 @@
-// 選択したフォルダの FileSystemDirectoryHandle を IndexedDB に永続化する。
-// ハンドルは structured clone 可能なため、そのまま保存・復元できる。
+// 選択したフォルダの FileSystemDirectoryHandle 群を IndexedDB に永続化する。
+// ハンドルは structured clone 可能なため、配列のまま保存・復元できる。
 
 const DB_NAME = 'lite-md'
 const STORE_NAME = 'handles'
-const HANDLE_KEY = 'workspace-directory'
+const HANDLES_KEY = 'workspace-directories'
 
 function open_db(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -32,16 +32,14 @@ function run_tx<T>(
   )
 }
 
-export function save_handle(handle: FileSystemDirectoryHandle): Promise<void> {
-  return run_tx<IDBValidKey>('readwrite', (store) => store.put(handle, HANDLE_KEY)).then(() => undefined)
+export function save_handles(handles: FileSystemDirectoryHandle[]): Promise<void> {
+  return run_tx<IDBValidKey>('readwrite', (store) => store.put(handles, HANDLES_KEY)).then(
+    () => undefined,
+  )
 }
 
-export function load_handle(): Promise<FileSystemDirectoryHandle | null> {
-  return run_tx<FileSystemDirectoryHandle | undefined>('readonly', (store) =>
-    store.get(HANDLE_KEY),
-  ).then((handle) => handle ?? null)
-}
-
-export function clear_handle(): Promise<void> {
-  return run_tx('readwrite', (store) => store.delete(HANDLE_KEY)).then(() => undefined)
+export function load_handles(): Promise<FileSystemDirectoryHandle[]> {
+  return run_tx<FileSystemDirectoryHandle[] | undefined>('readonly', (store) =>
+    store.get(HANDLES_KEY),
+  ).then((value) => (Array.isArray(value) ? value : []))
 }
