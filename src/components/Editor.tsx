@@ -4,6 +4,7 @@ import { markdown } from '@codemirror/lang-markdown'
 import type { Command } from '@codemirror/view'
 import { EditorToolbar } from './EditorToolbar'
 import { markdown_keymap } from '../lib/editor/markdownCommands'
+import { useThemeStore } from '../store/themeStore'
 
 type EditorProps = {
   value: string
@@ -15,6 +16,7 @@ const extensions = [markdown(), markdown_keymap]
 
 export function Editor({ value, on_change, on_scroller }: EditorProps) {
   const cm_ref = useRef<ReactCodeMirrorRef>(null)
+  const theme = useThemeStore((s) => s.theme)
 
   const run = (command: Command) => {
     const view = cm_ref.current?.view
@@ -30,6 +32,7 @@ export function Editor({ value, on_change, on_scroller }: EditorProps) {
         ref={cm_ref}
         className="editor"
         value={value}
+        theme={theme}
         extensions={extensions}
         onChange={on_change}
         onCreateEditor={(view) => on_scroller?.(view.scrollDOM)}

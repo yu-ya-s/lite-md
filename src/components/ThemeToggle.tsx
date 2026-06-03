@@ -1,7 +1,8 @@
-import { useTheme } from '../hooks/useTheme'
+import { useThemeStore } from '../store/themeStore'
 
 export function ThemeToggle() {
-  const { theme, toggle_theme } = useTheme()
+  const theme = useThemeStore((s) => s.theme)
+  const toggle_theme = useThemeStore((s) => s.toggle_theme)
   const is_dark = theme === 'dark'
   const label = is_dark ? 'ライトモードに切替' : 'ダークモードに切替'
 
