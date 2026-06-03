@@ -7,6 +7,7 @@ import { SaveStatus } from './components/SaveStatus'
 import { SettingsDialog } from './components/SettingsDialog'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { useAutoSave } from './hooks/useAutoSave'
+import { useScrollSync } from './hooks/useScrollSync'
 import { useWorkspaceStore } from './store/workspaceStore'
 
 function App() {
@@ -14,12 +15,15 @@ function App() {
   const set_content = useWorkspaceStore((s) => s.set_content)
   const preview_source = useDebouncedValue(content, 200)
   const [settings_open, set_settings_open] = useState(false)
+  const [editor_scroller, set_editor_scroller] = useState<HTMLElement | null>(null)
+  const [preview_scroller, set_preview_scroller] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     void useWorkspaceStore.getState().init()
   }, [])
 
   useAutoSave()
+  useScrollSync(editor_scroller, preview_scroller)
 
   return (
     <div className="app">
@@ -45,10 +49,10 @@ function App() {
 
         <main className="app__main">
           <section className="pane pane--editor" aria-label="エディタ">
-            <Editor value={content} on_change={set_content} />
+            <Editor value={content} on_change={set_content} on_scroller={set_editor_scroller} />
           </section>
           <section className="pane pane--preview" aria-label="プレビュー">
-            <Preview markdown={preview_source} />
+            <Preview markdown={preview_source} on_container={set_preview_scroller} />
           </section>
         </main>
       </div>

@@ -8,11 +8,12 @@ import { markdown_keymap } from '../lib/editor/markdownCommands'
 type EditorProps = {
   value: string
   on_change: (value: string) => void
+  on_scroller?: (el: HTMLElement) => void
 }
 
 const extensions = [markdown(), markdown_keymap]
 
-export function Editor({ value, on_change }: EditorProps) {
+export function Editor({ value, on_change, on_scroller }: EditorProps) {
   const cm_ref = useRef<ReactCodeMirrorRef>(null)
 
   const run = (command: Command) => {
@@ -31,6 +32,7 @@ export function Editor({ value, on_change }: EditorProps) {
         value={value}
         extensions={extensions}
         onChange={on_change}
+        onCreateEditor={(view) => on_scroller?.(view.scrollDOM)}
         basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
       />
     </div>

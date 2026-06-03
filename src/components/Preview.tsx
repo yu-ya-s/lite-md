@@ -5,12 +5,20 @@ import { useSettingsStore } from '../store/settingsStore'
 
 type PreviewProps = {
   markdown: string
+  on_container?: (el: HTMLDivElement) => void
 }
 
-export function Preview({ markdown }: PreviewProps) {
+export function Preview({ markdown, on_container }: PreviewProps) {
   const plantuml_enabled = useSettingsStore((s) => s.plantuml_enabled)
   const plantuml_server = useSettingsStore((s) => s.plantuml_server)
   const ref = useRef<HTMLDivElement>(null)
+
+  // スクロール同期のため、スクロール対象の要素を親へ渡す
+  useEffect(() => {
+    if (ref.current) {
+      on_container?.(ref.current)
+    }
+  }, [on_container])
 
   // HTML描画も図描画もこのeffect内で手動で行う。
   // React に innerHTML を管理させると、図描画（手動DOM書き換え）と衝突して
