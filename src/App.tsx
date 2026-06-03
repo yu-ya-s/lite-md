@@ -18,8 +18,11 @@ import { useWorkspaceStore } from './store/workspaceStore'
 
 const SPLIT_KEY = 'lite-md:split'
 const COLLAPSE_KEY = 'lite-md:sidebar-collapsed'
+const VIEW_KEY = 'lite-md:view-mode'
 const MIN_SPLIT = 0.15
 const MAX_SPLIT = 0.85
+
+type ViewMode = 'split' | 'preview'
 
 function read_split(): number {
   const value = Number(localStorage.getItem(SPLIT_KEY))
@@ -30,6 +33,10 @@ function read_collapsed(): boolean {
   return localStorage.getItem(COLLAPSE_KEY) === '1'
 }
 
+function read_view_mode(): ViewMode {
+  return localStorage.getItem(VIEW_KEY) === 'preview' ? 'preview' : 'split'
+}
+
 function App() {
   const content = useWorkspaceStore((s) => s.content)
   const set_content = useWorkspaceStore((s) => s.set_content)
@@ -37,6 +44,7 @@ function App() {
 
   const [settings_open, set_settings_open] = useState(false)
   const [sidebar_collapsed, set_sidebar_collapsed] = useState(read_collapsed)
+  const [view_mode, set_view_mode] = useState<ViewMode>(read_view_mode)
   const [split, set_split] = useState(read_split)
   const [editor_scroller, set_editor_scroller] = useState<HTMLElement | null>(null)
   const [preview_scroller, set_preview_scroller] = useState<HTMLDivElement | null>(null)
@@ -53,6 +61,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(COLLAPSE_KEY, sidebar_collapsed ? '1' : '0')
   }, [sidebar_collapsed])
+
+  useEffect(() => {
+    localStorage.setItem(VIEW_KEY, view_mode)
+  }, [view_mode])
 
   useAutoSave()
   useScrollSync(editor_scroller, preview_scroller)
@@ -102,6 +114,16 @@ function App() {
           <button
             type="button"
             className="toolbar-btn"
+            aria-label={view_mode === 'split' ? 'プレビューのみ表示' : 'エディタを表示'}
+            title={view_mode === 'split' ? 'プレビューのみ表示' : 'エディタを表示'}
+            aria-pressed={view_mode === 'preview'}
+            onClick={() => set_view_mode((mode) => (mode === 'split' ? 'preview' : 'split'))}
+          >
+            {view_mode === 'split' ? '👁' : '◧'}
+          </button>
+          <button
+            type="button"
+            className="toolbar-btn"
             aria-label="設定"
             title="設定"
             onClick={() => set_settings_open(true)}
@@ -115,7 +137,11 @@ function App() {
       <div className="app__body">
         <Sidebar collapsed={sidebar_collapsed} />
 
-        <main className="app__main" ref={main_ref} style={main_style}>
+        <main
+          className={`app__main${view_mode === 'preview' ? ' app__main--preview' : ''}`}
+          ref={main_ref}
+          style={main_style}
+        >
           <section className="pane pane--editor" aria-label="エディタ">
             <Editor value={content} on_change={set_content} on_scroller={set_editor_scroller} />
           </section>

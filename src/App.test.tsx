@@ -72,6 +72,19 @@ describe('App', () => {
     expect(screen.getByRole('separator')).toBeInTheDocument()
   })
 
+  it('表示モードを「プレビューのみ」に切り替えられる', () => {
+    render(<App />)
+    const main = screen.getByLabelText('プレビュー').closest('.app__main') as HTMLElement
+    expect(main.className).not.toContain('app__main--preview')
+
+    fireEvent.click(screen.getByRole('button', { name: 'プレビューのみ表示' }))
+    expect(main.className).toContain('app__main--preview')
+    expect(screen.getByRole('button', { name: 'エディタを表示' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'エディタを表示' }))
+    expect(main.className).not.toContain('app__main--preview')
+  })
+
   it('区切りのドラッグでエディタ幅の比率が変わる', () => {
     render(<App />)
     const separator = screen.getByRole('separator')

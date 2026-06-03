@@ -128,6 +128,16 @@ body {
   background-color: var(--color-accent);
 }
 
+/* プレビューのみモード: エディタと区切りを隠して1カラムに */
+.app__main--preview {
+  grid-template-columns: 1fr;
+}
+
+.app__main--preview .pane--editor,
+.app__main--preview .splitter {
+  display: none;
+}
+
 .preview {
   height: 100%;
   padding: 16px 24px;
