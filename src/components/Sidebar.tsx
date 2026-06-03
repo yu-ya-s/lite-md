@@ -70,7 +70,9 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
             workspaces.map((ws) => (
               <div key={ws.id} className="workspace">
                 <div className="sidebar__folder">
-                  <span className="sidebar__folder-name">📁 {ws.name}</span>
+                  <span className="sidebar__folder-name" title={ws.name}>
+                    📁 {ws.name}
+                  </span>
                   <button
                     type="button"
                     className="sidebar__close"

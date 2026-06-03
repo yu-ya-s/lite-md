@@ -12,6 +12,7 @@ function FileItem({ workspace_id, node }: { workspace_id: string; node: FileNode
       <button
         type="button"
         className={`tree__file${is_active ? ' tree__file--active' : ''}`}
+        title={node.name}
         onClick={() => void open_file(workspace_id, node.path)}
       >
         {node.name}
@@ -29,6 +30,7 @@ function DirItem({ workspace_id, node }: { workspace_id: string; node: Directory
         type="button"
         className="tree__dir"
         aria-expanded={open}
+        title={node.name}
         onClick={() => set_open((value) => !value)}
       >
         <span className="tree__caret">{open ? '▾' : '▸'}</span> {node.name}
