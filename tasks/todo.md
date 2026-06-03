@@ -17,16 +17,17 @@
 
 ## フェーズ
 
-### Phase 1: プロジェクト基盤
-- [ ] Vite + React + TS 雛形、ESLint/Prettier、Vitest
-- [ ] 基本レイアウト（ツールバー / サイドバー / 分割ペイン）+ CSS変数テーマ + ダーク/ライト切替
-- [ ] スモークテスト、`npm test` / `npm run build` が通る
-- [ ] 初期コミット 🎉
+### Phase 1: プロジェクト基盤 ✅
+- [x] Vite + React + TS 雛形、ESLint/Prettier、Vitest
+- [x] 基本レイアウト（ツールバー / サイドバー / 分割ペイン）+ CSS変数テーマ + ダーク/ライト切替
+- [x] スモークテスト、`npm test` / `npm run build` が通る
+- [x] 初期コミット 🎉（a48dd68）
 
-### Phase 2: エディタ + ライブプレビュー（コア）
-- [ ] CodeMirrorエディタ、markdown-itパイプライン、DOMPurifyサニタイズ
-- [ ] 分割ペイン、デバウンス付きリアルタイム反映
-- [ ] テスト → コミット 👍
+### Phase 2: エディタ + ライブプレビュー（コア）✅
+- [x] CodeMirrorエディタ、markdown-itパイプライン、DOMPurifyサニタイズ
+- [x] 分割ペイン、デバウンス付きリアルタイム反映（200ms）
+- [x] テスト（24件・分岐92.8%）→ コミット 👍
+- メモ: バンドル325KB gzip（CodeMirror分）。Mermaid導入時に遅延ロード/コード分割で軽量化する
 
 ### Phase 3: ローカルフォルダ連携（File System Access API）
 - [ ] フォルダを開く / ファイルツリー / 読込 / 保存 / 自動保存（デバウンス）

@@ -1,6 +1,30 @@
+import { useState } from 'react'
 import { ThemeToggle } from './components/ThemeToggle'
+import { Editor } from './components/Editor'
+import { Preview } from './components/Preview'
+import { useDebouncedValue } from './hooks/useDebouncedValue'
+
+const INITIAL_CONTENT = `# lite-md
+
+軽量Markdownエディタへようこそ。
+
+- 左で編集すると
+- 右にリアルタイムでプレビューされます
+
+| 機能 | 状態 |
+| --- | --- |
+| 分割ビュー | 実装済み |
+| ローカル保存 | 予定 |
+
+\`\`\`js
+console.log('hello, lite-md')
+\`\`\`
+`
 
 function App() {
+  const [content, set_content] = useState(INITIAL_CONTENT)
+  const preview_source = useDebouncedValue(content, 200)
+
   return (
     <div className="app">
       <header className="app__toolbar">
@@ -17,10 +41,10 @@ function App() {
 
         <main className="app__main">
           <section className="pane pane--editor" aria-label="エディタ">
-            <p className="app__placeholder">エディタ（Phase 2で実装）</p>
+            <Editor value={content} on_change={set_content} />
           </section>
           <section className="pane pane--preview" aria-label="プレビュー">
-            <p className="app__placeholder">プレビュー（Phase 2で実装）</p>
+            <Preview markdown={preview_source} />
           </section>
         </main>
       </div>
