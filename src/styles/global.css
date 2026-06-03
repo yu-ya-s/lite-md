@@ -1,0 +1,131 @@
+:root {
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-border: #e3e6ea;
+  --color-text: #1f2328;
+  --color-text-muted: #6b7280;
+  --color-accent: #3b82f6;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP',
+    Meiryo, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --toolbar-height: 48px;
+  --sidebar-width: 240px;
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #0d1117;
+  --color-bg-subtle: #161b22;
+  --color-surface: #0d1117;
+  --color-border: #30363d;
+  --color-text: #e6edf3;
+  --color-text-muted: #8b949e;
+  --color-accent: #58a6ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--toolbar-height);
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+  flex: 0 0 auto;
+}
+
+.app__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.app__body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app__sidebar {
+  width: var(--sidebar-width);
+  flex: 0 0 auto;
+  padding: 12px;
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+  overflow: auto;
+}
+
+.app__main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pane {
+  padding: 16px;
+  overflow: auto;
+  min-width: 0;
+}
+
+.pane--editor {
+  border-right: 1px solid var(--color-border);
+}
+
+.app__placeholder {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--color-accent);
+}
+
+@media (max-width: 768px) {
+  .app__sidebar {
+    display: none;
+  }
+
+  .app__main {
+    grid-template-columns: 1fr;
+  }
+}
