@@ -140,7 +140,7 @@ body {
 
 /* プレビューのみのときは読みやすい幅で中央寄せにする */
 .app__main--preview .preview {
-  max-width: 820px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 24px 32px;
 }
