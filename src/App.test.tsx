@@ -59,4 +59,17 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: '反映テスト' })).toBeInTheDocument()
     })
   })
+
+  it('サイドバー切替ボタンでサイドバーを折りたためる', () => {
+    render(<App />)
+    const aside = screen.getByLabelText('ファイル一覧')
+    expect(aside.className).not.toContain('app__sidebar--collapsed')
+    fireEvent.click(screen.getByRole('button', { name: 'サイドバーの表示切替' }))
+    expect(aside.className).toContain('app__sidebar--collapsed')
+  })
+
+  it('エディタとプレビューの間に区切り（separator）がある', () => {
+    render(<App />)
+    expect(screen.getByRole('separator')).toBeInTheDocument()
+  })
 })

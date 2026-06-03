@@ -29,7 +29,11 @@ function FallbackOpen() {
   )
 }
 
-export function Sidebar() {
+type SidebarProps = {
+  collapsed?: boolean
+}
+
+export function Sidebar({ collapsed = false }: SidebarProps) {
   const is_supported = useWorkspaceStore((s) => s.is_supported)
   const folder_name = useWorkspaceStore((s) => s.folder_name)
   const tree = useWorkspaceStore((s) => s.tree)
@@ -40,7 +44,10 @@ export function Sidebar() {
   const close_folder = useWorkspaceStore((s) => s.close_folder)
 
   return (
-    <aside className="app__sidebar" aria-label="ファイル一覧">
+    <aside
+      className={`app__sidebar${collapsed ? ' app__sidebar--collapsed' : ''}`}
+      aria-label="ファイル一覧"
+    >
       {is_supported ? (
         <>
           <div className="sidebar__actions">

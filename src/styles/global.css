@@ -69,6 +69,12 @@ body {
   flex: 0 0 auto;
 }
 
+.app__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .app__title {
   margin: 0;
   font-size: 16px;
@@ -91,9 +97,13 @@ body {
   overflow: auto;
 }
 
+.app__sidebar--collapsed {
+  display: none;
+}
+
 .app__main {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: var(--editor-fr, 1fr) 6px var(--preview-fr, 1fr);
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -106,7 +116,16 @@ body {
 
 .pane--editor {
   display: flex;
-  border-right: 1px solid var(--color-border);
+}
+
+.splitter {
+  background-color: var(--color-border);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.splitter:hover {
+  background-color: var(--color-accent);
 }
 
 .preview {
@@ -574,5 +593,9 @@ body {
 
   .app__main {
     grid-template-columns: 1fr;
+  }
+
+  .splitter {
+    display: none;
   }
 }
