@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { useWorkspaceStore } from './store/workspaceStore'
 
 // App は内部で CodeMirror を描画するため、jsdom で安定動作する textarea に差し替える
 vi.mock('@uiw/react-codemirror', () => ({
@@ -14,6 +15,20 @@ vi.mock('@uiw/react-codemirror', () => ({
 import App from './App'
 
 describe('App', () => {
+  beforeEach(() => {
+    // ストアを既知の状態へ。init はテストでは副作用を起こさないよう no-op にする
+    useWorkspaceStore.setState({
+      content: '',
+      current_path: null,
+      save_status: 'idle',
+      is_supported: false,
+      tree: [],
+      folder_name: null,
+      can_restore: false,
+      init: async () => {},
+    })
+  })
+
   it('ツールバーにアプリタイトルを表示する', () => {
     render(<App />)
     const toolbar = screen.getByRole('banner')

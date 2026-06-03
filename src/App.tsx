@@ -1,43 +1,36 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { ThemeToggle } from './components/ThemeToggle'
 import { Editor } from './components/Editor'
 import { Preview } from './components/Preview'
+import { Sidebar } from './components/Sidebar'
+import { SaveStatus } from './components/SaveStatus'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
-
-const INITIAL_CONTENT = `# lite-md
-
-軽量Markdownエディタへようこそ。
-
-- 左で編集すると
-- 右にリアルタイムでプレビューされます
-
-| 機能 | 状態 |
-| --- | --- |
-| 分割ビュー | 実装済み |
-| ローカル保存 | 予定 |
-
-\`\`\`js
-console.log('hello, lite-md')
-\`\`\`
-`
+import { useAutoSave } from './hooks/useAutoSave'
+import { useWorkspaceStore } from './store/workspaceStore'
 
 function App() {
-  const [content, set_content] = useState(INITIAL_CONTENT)
+  const content = useWorkspaceStore((s) => s.content)
+  const set_content = useWorkspaceStore((s) => s.set_content)
   const preview_source = useDebouncedValue(content, 200)
+
+  useEffect(() => {
+    void useWorkspaceStore.getState().init()
+  }, [])
+
+  useAutoSave()
 
   return (
     <div className="app">
       <header className="app__toolbar">
         <h1 className="app__title">lite-md</h1>
         <div className="app__toolbar-actions">
+          <SaveStatus />
           <ThemeToggle />
         </div>
       </header>
 
       <div className="app__body">
-        <aside className="app__sidebar" aria-label="ファイル一覧">
-          <p className="app__placeholder">フォルダ未選択</p>
-        </aside>
+        <Sidebar />
 
         <main className="app__main">
           <section className="pane pane--editor" aria-label="エディタ">
