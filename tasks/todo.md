@@ -36,11 +36,12 @@
 - [x] テスト（合計65件・分岐92.4%）→ コミット 👍
 - メモ: showDirectoryPicker / queryPermission 等の型を src/types/fsa.d.ts で補完。テストは fake-indexeddb とFSハンドルモックで実施
 
-### Phase 4: 図とシンタックスハイライト
-- [ ] highlight.js、Mermaidフェンス描画（遅延ロード）
-- [ ] PlantUMLフェンス描画（```plantuml / ```uml、エンコード、サーバーURL設定、非同期）
-- [ ] 設定ダイアログ（PlantUMLサーバーURL・テーマ）、初回送信同意表示
-- [ ] テスト → コミット 👍
+### Phase 4: 図とシンタックスハイライト ✅
+- [x] highlight.js（描画後に遅延ロードして適用・初期バンドルから除外）、Mermaidフェンス描画（遅延ロード・テーマ追従・キャッシュ）
+- [x] PlantUMLフェンス描画（```plantuml / ```uml、plantuml-encoder、サーバーURL設定、img方式・esa同様）
+- [x] 設定ダイアログ（PlantUML有効/無効・サーバーURL、送信に関する注意書き）
+- [x] テスト（合計81件・分岐82.1%）→ コミット 👍
+- メモ: 既定はPlantUML有効＋公式サーバー（すぐ使える）。設定で自前サーバー(localhost:8080)へ切替・無効化可。図ソースの保持は data-source に encodeURIComponent で格納（DOMPurifyの属性除去を回避）。Mermaidは遅延チャンク分割済み。メインバンドル gzip 約331KB
 
 ### Phase 5: ツールバー・ショートカット
 - [ ] 太字/見出し/リスト/リンク/コード等の挿入、Ctrl+B等ショートカット

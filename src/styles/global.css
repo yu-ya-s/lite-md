@@ -7,6 +7,11 @@
   --color-text-muted: #6b7280;
   --color-accent: #3b82f6;
   --color-code-bg: #f3f4f6;
+  --syntax-keyword: #d73a49;
+  --syntax-string: #032f62;
+  --syntax-comment: #6a737d;
+  --syntax-number: #005cc5;
+  --syntax-title: #6f42c1;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP',
     Meiryo, sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -23,6 +28,11 @@
   --color-text-muted: #8b949e;
   --color-accent: #58a6ff;
   --color-code-bg: #161b22;
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-comment: #8b949e;
+  --syntax-number: #79c0ff;
+  --syntax-title: #d2a8ff;
 }
 
 * {
@@ -245,7 +255,14 @@ body {
   color: #d33;
 }
 
-.theme-toggle {
+.app__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle,
+.toolbar-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -260,7 +277,8 @@ body {
   cursor: pointer;
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover,
+.toolbar-btn:hover {
   border-color: var(--color-accent);
 }
 
@@ -360,6 +378,155 @@ body {
 
 .markdown-body img {
   max-width: 100%;
+}
+
+/* シンタックスハイライト（highlight.js のトークンをCSS変数で着色しテーマ追従） */
+.hljs-keyword,
+.hljs-built_in,
+.hljs-literal,
+.hljs-type {
+  color: var(--syntax-keyword);
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-meta .hljs-string {
+  color: var(--syntax-string);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--syntax-comment);
+  font-style: italic;
+}
+
+.hljs-number,
+.hljs-symbol {
+  color: var(--syntax-number);
+}
+
+.hljs-title,
+.hljs-name,
+.hljs-section,
+.hljs-attribute {
+  color: var(--syntax-title);
+}
+
+/* 図（Mermaid / PlantUML） */
+.lite-md-diagram {
+  margin: 1em 0;
+  overflow: auto;
+  text-align: center;
+}
+
+.lite-md-diagram svg,
+.lite-md-plantuml-img {
+  max-width: 100%;
+  height: auto;
+}
+
+.lite-md-diagram--note,
+.lite-md-diagram--error {
+  padding: 8px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-align: left;
+}
+
+.lite-md-diagram--error {
+  color: #d33;
+}
+
+/* 設定ダイアログ */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.dialog {
+  width: min(520px, 92vw);
+  max-height: 86vh;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dialog__title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.dialog__close {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dialog__body {
+  padding: 16px;
+}
+
+.settings__heading {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.settings__input {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.settings__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.settings__note code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background-color: var(--color-code-bg);
+  font-family: var(--font-mono);
 }
 
 @media (max-width: 768px) {
