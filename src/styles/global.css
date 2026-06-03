@@ -282,10 +282,45 @@ body {
   border-color: var(--color-accent);
 }
 
-/* エディタ（CodeMirror）をペイン全体に広げる */
-.editor {
+/* エディタ（ツールバー + CodeMirror）をペイン全体に広げる */
+.editor-wrap {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
+  min-height: 0;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+}
+
+.editor-toolbar__btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.editor-toolbar__btn:hover {
+  background-color: var(--color-border);
+}
+
+.editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
 }
 
 .editor .cm-editor {
