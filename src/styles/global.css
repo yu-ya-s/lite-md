@@ -260,6 +260,12 @@ body {
   gap: 10px;
 }
 
+.sidebar__filter {
+  width: 100%;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
 /* ファイルツリー */
 .tree__list {
   list-style: none;

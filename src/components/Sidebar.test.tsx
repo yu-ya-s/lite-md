@@ -15,6 +15,7 @@ function fake_workspace(
 
 describe('Sidebar', () => {
   beforeEach(() => {
+    localStorage.clear()
     useWorkspaceStore.setState(initial_state, true)
   })
 
@@ -123,6 +124,27 @@ describe('Sidebar', () => {
     render(<Sidebar />)
     fireEvent.click(screen.getByRole('button', { name: '前回のフォルダを開く' }))
     expect(restore_folders).toHaveBeenCalled()
+  })
+
+  it('「【済】を隠す」で【済】ファイルを一覧から除外し、再押下で再表示する', () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'a.md', path: 'a.md' },
+          { kind: 'file', name: '【済】b.md', path: '【済】b.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    expect(screen.getByRole('button', { name: '【済】b.md' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '【済】を隠す' }))
+    expect(screen.queryByRole('button', { name: '【済】b.md' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'a.md' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '【済】を表示' }))
+    expect(screen.getByRole('button', { name: '【済】b.md' })).toBeInTheDocument()
   })
 
   it('エラーがあれば表示する', () => {

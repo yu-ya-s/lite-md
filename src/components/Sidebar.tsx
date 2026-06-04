@@ -1,6 +1,9 @@
-import { useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
-import { useWorkspaceStore } from '../store/workspaceStore'
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { DONE_PREFIX, useWorkspaceStore } from '../store/workspaceStore'
+import { filter_out_prefixed } from '../lib/tree'
 import { FileTree } from './FileTree'
+
+const HIDE_DONE_KEY = 'lite-md:hide-done'
 
 function FallbackOpen() {
   const open_text = useWorkspaceStore((s) => s.open_text)
@@ -46,6 +49,11 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
   const [editing_id, set_editing_id] = useState<string | null>(null)
   const [draft, set_draft] = useState('')
+  const [hide_done, set_hide_done] = useState(() => localStorage.getItem(HIDE_DONE_KEY) === '1')
+
+  useEffect(() => {
+    localStorage.setItem(HIDE_DONE_KEY, hide_done ? '1' : '0')
+  }, [hide_done])
   // Escape による取り消しが blur 経由で誤って確定されないよう、取り消し中フラグを持つ
   const cancel_rename = useRef(false)
 
@@ -96,9 +104,21 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
           {error && <p className="sidebar__error">{error}</p>}
 
+          {workspaces.length > 0 && (
+            <button
+              type="button"
+              className="btn btn--subtle sidebar__filter"
+              aria-pressed={hide_done}
+              onClick={() => set_hide_done((value) => !value)}
+            >
+              {hide_done ? '【済】を表示' : '【済】を隠す'}
+            </button>
+          )}
+
           {workspaces.length > 0 ? (
             workspaces.map((ws) => {
               const display_name = ws.label || ws.name
+              const nodes = hide_done ? filter_out_prefixed(ws.tree, DONE_PREFIX) : ws.tree
               return (
                 <div key={ws.id} className="workspace">
                   <div className="sidebar__folder">
@@ -147,7 +167,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                       </button>
                     </span>
                   </div>
-                  <FileTree workspace_id={ws.id} nodes={ws.tree} />
+                  <FileTree workspace_id={ws.id} nodes={nodes} />
                 </div>
               )
             })
