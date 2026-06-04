@@ -79,9 +79,12 @@
   - レビュー結果は Windows 側の レビュー結果フォルダにも保存
 - [x] アクセシビリティ点検: 設定ダイアログ Esc/フォーカス、splitter キーボード操作（矢印キー・ARIA値）、コントラスト改善、エラー色の変数化
 - [x] カバレッジ80%以上維持（128件・分岐81.9%）
-- [ ] README整備
-- [ ] Vercel配信設定（CSP/セキュリティヘッダ含む）
-- [ ] （任意）クリティカルフローのE2E（Playwright）
+- [x] README整備（特徴・プライバシー方針・開発/デプロイ手順・PlantUML自前サーバー手順）
+- [x] Vercel配信設定（vercel.json: ビルド設定 + CSP/セキュリティヘッダ。modulepre%ポリフィル無効化でscript-src 'self'運用）
+- [ ] （任意・未着手）クリティカルフローのE2E（Playwright）
+
+### Phase 8: 配信設定 ✅（Phase 7と統合）
+- [x] 静的ビルド + Vercel デプロイ設定（vercel.json）、README にデプロイ手順
 
 ### Phase 8: 配信設定
 - [ ] 静的ビルド、Vercelデプロイ設定、READMEにデプロイ手順 → コミット 🔧

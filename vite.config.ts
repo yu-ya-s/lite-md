@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // CSP を script-src 'self' で運用するため、インラインの modulepreload polyfill を無効化する
+    // （対象ブラウザ Chrome/Edge は modulepreload にネイティブ対応）
+    modulePreload: { polyfill: false },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
