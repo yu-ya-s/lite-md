@@ -93,6 +93,18 @@ describe('Sidebar', () => {
     expect(screen.getByText('📁 docs')).toBeInTheDocument()
   })
 
+  it('各フォルダの再読み込みボタンで reload_folder を呼ぶ', () => {
+    const reload_folder = vi.fn(async () => {})
+    useWorkspaceStore.setState({
+      is_supported: true,
+      reload_folder,
+      workspaces: [fake_workspace('ws-1', 'notes', [])],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を再読み込み' }))
+    expect(reload_folder).toHaveBeenCalledWith('ws-1')
+  })
+
   it('各フォルダの閉じるボタンで close_folder を呼ぶ', () => {
     const close_folder = vi.fn(async () => {})
     useWorkspaceStore.setState({

@@ -230,6 +230,34 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().current).toBeNull()
   })
 
+  it('reload_folder でツリーを再走査して新規ファイルを反映する', async () => {
+    let calls = 0
+    const ws_obj = {
+      build_tree: async () => {
+        calls += 1
+        const base = [{ kind: 'file' as const, name: 'a.md', path: 'a.md' }]
+        if (calls === 1) return base
+        return [...base, { kind: 'file' as const, name: '【済】new.md', path: '【済】new.md' }]
+      },
+    }
+    useWorkspaceStore.setState({
+      workspaces: [
+        {
+          id: 'ws-1',
+          name: 'n',
+          label: '',
+          handle: {} as never,
+          workspace: ws_obj as never,
+          tree: await ws_obj.build_tree(),
+        },
+      ],
+    })
+    expect(useWorkspaceStore.getState().workspaces[0].tree).toHaveLength(1)
+
+    await useWorkspaceStore.getState().reload_folder('ws-1')
+    expect(useWorkspaceStore.getState().workspaces[0].tree).toHaveLength(2)
+  })
+
   it('save: 保存中にファイルが切り替わったら状態を上書きしない', async () => {
     let resolve_write!: () => void
     const slow_ws = {

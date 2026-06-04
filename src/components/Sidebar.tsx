@@ -40,6 +40,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const error = useWorkspaceStore((s) => s.error)
   const add_folder = useWorkspaceStore((s) => s.add_folder)
   const restore_folders = useWorkspaceStore((s) => s.restore_folders)
+  const reload_folder = useWorkspaceStore((s) => s.reload_folder)
   const rename_workspace = useWorkspaceStore((s) => s.rename_workspace)
   const close_folder = useWorkspaceStore((s) => s.close_folder)
 
@@ -117,6 +118,15 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                       </span>
                     )}
                     <span className="sidebar__folder-actions">
+                      <button
+                        type="button"
+                        className="sidebar__icon"
+                        aria-label={`${display_name} を再読み込み`}
+                        title="フォルダを再読み込み（新しいファイルを反映）"
+                        onClick={() => void reload_folder(ws.id)}
+                      >
+                        ↻
+                      </button>
                       <button
                         type="button"
                         className="sidebar__icon"

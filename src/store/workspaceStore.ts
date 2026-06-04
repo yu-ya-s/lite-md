@@ -57,6 +57,7 @@ type WorkspaceState = {
   init: () => Promise<void>
   add_folder: () => Promise<void>
   restore_folders: () => Promise<void>
+  reload_folder: (workspace_id: string) => Promise<void>
   rename_workspace: (workspace_id: string, label: string) => Promise<void>
   open_file: (workspace_id: string, path: string) => Promise<void>
   set_content: (content: string) => void
@@ -137,6 +138,22 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({ workspaces: loaded, can_restore: false, error: null, current: null })
     } catch {
       set({ error: 'フォルダを復元できませんでした' })
+    }
+  },
+
+  reload_folder: async (workspace_id) => {
+    const ws = get().workspaces.find((w) => w.id === workspace_id)
+    if (!ws) return
+    // ハンドルは保持済みなので、ページを再読み込みせずツリーだけ再走査する
+    // （裏で生成されたファイルなどを反映するため）
+    try {
+      const tree = await ws.workspace.build_tree()
+      set({
+        workspaces: get().workspaces.map((w) => (w.id === workspace_id ? { ...w, tree } : w)),
+        error: null,
+      })
+    } catch {
+      set({ error: 'フォルダの再読み込みに失敗しました' })
     }
   },
 
