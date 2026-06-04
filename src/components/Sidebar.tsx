@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react'
+import { useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { useWorkspaceStore } from '../store/workspaceStore'
 import { FileTree } from './FileTree'
 
@@ -40,7 +40,36 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const error = useWorkspaceStore((s) => s.error)
   const add_folder = useWorkspaceStore((s) => s.add_folder)
   const restore_folders = useWorkspaceStore((s) => s.restore_folders)
+  const rename_workspace = useWorkspaceStore((s) => s.rename_workspace)
   const close_folder = useWorkspaceStore((s) => s.close_folder)
+
+  const [editing_id, set_editing_id] = useState<string | null>(null)
+  const [draft, set_draft] = useState('')
+  // Escape による取り消しが blur 経由で誤って確定されないよう、取り消し中フラグを持つ
+  const cancel_rename = useRef(false)
+
+  const start_rename = (id: string, current: string) => {
+    set_editing_id(id)
+    set_draft(current)
+  }
+
+  const finish_rename = (id: string) => {
+    if (cancel_rename.current) {
+      cancel_rename.current = false
+    } else {
+      void rename_workspace(id, draft.trim())
+    }
+    set_editing_id(null)
+  }
+
+  const on_rename_key = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.blur()
+    } else if (event.key === 'Escape') {
+      cancel_rename.current = true
+      event.currentTarget.blur()
+    }
+  }
 
   return (
     <aside
@@ -67,24 +96,51 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
           {error && <p className="sidebar__error">{error}</p>}
 
           {workspaces.length > 0 ? (
-            workspaces.map((ws) => (
-              <div key={ws.id} className="workspace">
-                <div className="sidebar__folder">
-                  <span className="sidebar__folder-name" title={ws.name}>
-                    📁 {ws.name}
-                  </span>
-                  <button
-                    type="button"
-                    className="sidebar__close"
-                    aria-label={`${ws.name} を閉じる`}
-                    onClick={() => void close_folder(ws.id)}
-                  >
-                    ✕
-                  </button>
+            workspaces.map((ws) => {
+              const display_name = ws.label || ws.name
+              return (
+                <div key={ws.id} className="workspace">
+                  <div className="sidebar__folder">
+                    {editing_id === ws.id ? (
+                      <input
+                        className="sidebar__rename"
+                        autoFocus
+                        value={draft}
+                        aria-label="フォルダの表示名"
+                        onChange={(event) => set_draft(event.target.value)}
+                        onBlur={() => finish_rename(ws.id)}
+                        onKeyDown={on_rename_key}
+                      />
+                    ) : (
+                      <span className="sidebar__folder-name" title={display_name}>
+                        📁 {display_name}
+                      </span>
+                    )}
+                    <span className="sidebar__folder-actions">
+                      <button
+                        type="button"
+                        className="sidebar__icon"
+                        aria-label={`${display_name} の表示名を変更`}
+                        title="表示名を変更"
+                        onClick={() => start_rename(ws.id, ws.label || ws.name)}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        type="button"
+                        className="sidebar__icon"
+                        aria-label={`${display_name} を閉じる`}
+                        title="フォルダを閉じる"
+                        onClick={() => void close_folder(ws.id)}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  </div>
+                  <FileTree workspace_id={ws.id} nodes={ws.tree} />
                 </div>
-                <FileTree workspace_id={ws.id} nodes={ws.tree} />
-              </div>
-            ))
+              )
+            })
           ) : (
             <p className="app__placeholder">フォルダ未選択</p>
           )}

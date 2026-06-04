@@ -208,7 +208,13 @@ body {
   text-overflow: ellipsis;
 }
 
-.sidebar__close {
+.sidebar__folder-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.sidebar__icon {
   border: none;
   background: none;
   color: var(--color-text-muted);
@@ -217,8 +223,19 @@ body {
   padding: 2px 4px;
 }
 
-.sidebar__close:hover {
+.sidebar__icon:hover {
   color: var(--color-text);
+}
+
+.sidebar__rename {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--color-accent);
+  border-radius: 4px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
 }
 
 .sidebar__error {

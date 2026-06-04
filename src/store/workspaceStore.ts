@@ -2,13 +2,14 @@ import { create } from 'zustand'
 import type { TreeNode } from '../lib/storage/types'
 import { FsaWorkspace } from '../lib/storage/fsaWorkspace'
 import { is_fsa_supported } from '../lib/storage/support'
-import { load_handles, save_handles } from '../lib/storage/handleStore'
+import { load_folders, save_folders } from '../lib/storage/handleStore'
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
 
 export type LoadedWorkspace = {
   id: string
   name: string
+  label: string
   handle: FileSystemDirectoryHandle
   workspace: FsaWorkspace
   tree: TreeNode[]
@@ -29,11 +30,18 @@ export const WELCOME_CONTENT = `# lite-md へようこそ
 
 let workspace_seq = 0
 
-async function build_loaded(handle: FileSystemDirectoryHandle): Promise<LoadedWorkspace> {
+async function build_loaded(
+  handle: FileSystemDirectoryHandle,
+  label = '',
+): Promise<LoadedWorkspace> {
   const workspace = new FsaWorkspace(handle)
   const tree = await workspace.build_tree()
   workspace_seq += 1
-  return { id: `ws-${workspace_seq}`, name: handle.name, handle, workspace, tree }
+  return { id: `ws-${workspace_seq}`, name: handle.name, label, handle, workspace, tree }
+}
+
+function to_persisted(workspaces: LoadedWorkspace[]) {
+  return workspaces.map((w) => ({ handle: w.handle, label: w.label }))
 }
 
 type WorkspaceState = {
@@ -48,6 +56,7 @@ type WorkspaceState = {
   init: () => Promise<void>
   add_folder: () => Promise<void>
   restore_folders: () => Promise<void>
+  rename_workspace: (workspace_id: string, label: string) => Promise<void>
   open_file: (workspace_id: string, path: string) => Promise<void>
   set_content: (content: string) => void
   open_text: (content: string) => void
@@ -69,14 +78,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ is_supported: supported })
     if (!supported) return
     try {
-      const handles = await load_handles()
-      if (handles.length === 0) return
+      const folders = await load_folders()
+      if (folders.length === 0) return
 
       const loaded: LoadedWorkspace[] = []
       let any_denied = false
-      for (const handle of handles) {
-        if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') {
-          loaded.push(await build_loaded(handle))
+      for (const folder of folders) {
+        if ((await folder.handle.queryPermission({ mode: 'readwrite' })) === 'granted') {
+          loaded.push(await build_loaded(folder.handle, folder.label))
         } else {
           any_denied = true
         }
@@ -93,7 +102,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const loaded = await build_loaded(handle)
       const workspaces = [...get().workspaces, loaded]
       set({ workspaces, error: null })
-      await save_handles(workspaces.map((w) => w.handle))
+      await save_folders(to_persisted(workspaces))
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       set({ error: 'フォルダを開けませんでした' })
@@ -102,16 +111,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   restore_folders: async () => {
     try {
-      const handles = await load_handles()
-      if (handles.length === 0) {
+      const folders = await load_folders()
+      if (folders.length === 0) {
         set({ can_restore: false })
         return
       }
 
       const loaded: LoadedWorkspace[] = []
-      for (const handle of handles) {
-        if ((await handle.requestPermission({ mode: 'readwrite' })) === 'granted') {
-          loaded.push(await build_loaded(handle))
+      for (const folder of folders) {
+        if ((await folder.handle.requestPermission({ mode: 'readwrite' })) === 'granted') {
+          loaded.push(await build_loaded(folder.handle, folder.label))
         }
       }
 
@@ -123,6 +132,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     } catch {
       set({ error: 'フォルダを復元できませんでした' })
     }
+  },
+
+  rename_workspace: async (workspace_id, label) => {
+    const workspaces = get().workspaces.map((w) =>
+      w.id === workspace_id ? { ...w, label } : w,
+    )
+    set({ workspaces })
+    await save_folders(to_persisted(workspaces))
   },
 
   open_file: async (workspace_id, path) => {
@@ -173,6 +190,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     } else {
       set({ workspaces: remaining })
     }
-    await save_handles(remaining.map((w) => w.handle))
+    await save_folders(to_persisted(remaining))
   },
 }))

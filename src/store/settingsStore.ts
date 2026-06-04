@@ -17,7 +17,7 @@ const DEFAULTS: Settings = {
   save_mode: 'manual',
 }
 
-function load_settings(): Settings {
+export function load_settings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {

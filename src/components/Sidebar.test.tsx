@@ -4,8 +4,13 @@ import { useWorkspaceStore, type LoadedWorkspace } from '../store/workspaceStore
 
 const initial_state = useWorkspaceStore.getState()
 
-function fake_workspace(id: string, name: string, tree: LoadedWorkspace['tree']): LoadedWorkspace {
-  return { id, name, tree, handle: {} as FileSystemDirectoryHandle, workspace: {} as never }
+function fake_workspace(
+  id: string,
+  name: string,
+  tree: LoadedWorkspace['tree'],
+  label = '',
+): LoadedWorkspace {
+  return { id, name, label, tree, handle: {} as FileSystemDirectoryHandle, workspace: {} as never }
 }
 
 describe('Sidebar', () => {
@@ -46,6 +51,46 @@ describe('Sidebar', () => {
     expect(screen.getByText('📁 docs')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'a.md' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'b.md' })).toBeInTheDocument()
+  })
+
+  it('ラベルが設定されていればフォルダ名の代わりに表示する', () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [fake_workspace('ws-1', 'docs', [], 'プロジェクトA/docs')],
+    })
+    render(<Sidebar />)
+    expect(screen.getByText('📁 プロジェクトA/docs')).toBeInTheDocument()
+  })
+
+  it('✎ ボタンで表示名を編集して rename_workspace を呼ぶ', () => {
+    const rename_workspace = vi.fn(async () => {})
+    useWorkspaceStore.setState({
+      is_supported: true,
+      rename_workspace,
+      workspaces: [fake_workspace('ws-1', 'docs', [])],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'docs の表示名を変更' }))
+    const input = screen.getByLabelText('フォルダの表示名')
+    fireEvent.change(input, { target: { value: 'プロジェクトA/docs' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(rename_workspace).toHaveBeenCalledWith('ws-1', 'プロジェクトA/docs')
+  })
+
+  it('表示名の編集を Escape でキャンセルする', () => {
+    const rename_workspace = vi.fn(async () => {})
+    useWorkspaceStore.setState({
+      is_supported: true,
+      rename_workspace,
+      workspaces: [fake_workspace('ws-1', 'docs', [])],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'docs の表示名を変更' }))
+    const input = screen.getByLabelText('フォルダの表示名')
+    fireEvent.change(input, { target: { value: '破棄される' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(rename_workspace).not.toHaveBeenCalled()
+    expect(screen.getByText('📁 docs')).toBeInTheDocument()
   })
 
   it('各フォルダの閉じるボタンで close_folder を呼ぶ', () => {

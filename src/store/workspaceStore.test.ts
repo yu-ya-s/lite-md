@@ -1,15 +1,15 @@
 import { useWorkspaceStore } from './workspaceStore'
 import { create_mock_directory } from '../test/fsMocks'
-import { save_handles } from '../lib/storage/handleStore'
+import { save_folders, type PersistedFolder } from '../lib/storage/handleStore'
 
-// IndexedDB は使わず、ハンドル保存はメモリ上のスタブで代替する
+// IndexedDB は使わず、フォルダ保存はメモリ上のスタブで代替する
 vi.mock('../lib/storage/handleStore', () => {
-  let stored: FileSystemDirectoryHandle[] = []
+  let stored: PersistedFolder[] = []
   return {
-    save_handles: vi.fn(async (handles: FileSystemDirectoryHandle[]) => {
-      stored = handles
+    save_folders: vi.fn(async (folders: PersistedFolder[]) => {
+      stored = folders
     }),
-    load_handles: vi.fn(async () => stored),
+    load_folders: vi.fn(async () => stored),
   }
 })
 
@@ -36,7 +36,7 @@ function make_handle(permission: PermissionState): FileSystemDirectoryHandle {
 
 describe('workspaceStore', () => {
   beforeEach(async () => {
-    await save_handles([])
+    await save_folders([])
     useWorkspaceStore.setState(initial_state, true)
   })
 
@@ -113,16 +113,20 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().is_supported).toBe(false)
   })
 
-  it('init: 権限付与済みの保存フォルダを自動復元する', async () => {
+  it('init: 権限付与済みの保存フォルダをラベル付きで自動復元する', async () => {
     set_picker(create_mock_directory('dummy', {}))
-    await save_handles([create_mock_directory('restored', { 'a.md': '# A' })])
+    await save_folders([
+      { handle: create_mock_directory('restored', { 'a.md': '# A' }), label: 'プロジェクトA' },
+    ])
     await useWorkspaceStore.getState().init()
-    expect(useWorkspaceStore.getState().workspaces.map((w) => w.name)).toEqual(['restored'])
+    const workspaces = useWorkspaceStore.getState().workspaces
+    expect(workspaces.map((w) => w.name)).toEqual(['restored'])
+    expect(workspaces[0].label).toBe('プロジェクトA')
   })
 
   it('init: 権限が未許可なら can_restore=true（自動復元しない）', async () => {
     set_picker(create_mock_directory('dummy', {}))
-    await save_handles([make_handle('prompt')])
+    await save_folders([{ handle: make_handle('prompt'), label: '' }])
     await useWorkspaceStore.getState().init()
     const state = useWorkspaceStore.getState()
     expect(state.can_restore).toBe(true)
@@ -130,25 +134,33 @@ describe('workspaceStore', () => {
   })
 
   it('restore_folders: 許可されればフォルダを復元する', async () => {
-    await save_handles([
-      create_mock_directory('restored', { 'a.md': '# A' }),
-      create_mock_directory('also', { 'b.md': '# B' }),
+    await save_folders([
+      { handle: create_mock_directory('restored', { 'a.md': '# A' }), label: '' },
+      { handle: create_mock_directory('also', { 'b.md': '# B' }), label: '' },
     ])
     await useWorkspaceStore.getState().restore_folders()
     expect(useWorkspaceStore.getState().workspaces.map((w) => w.name)).toEqual(['restored', 'also'])
   })
 
-  it('restore_folders: 保存ハンドルが無ければ can_restore=false', async () => {
-    await save_handles([])
+  it('restore_folders: 保存フォルダが無ければ can_restore=false', async () => {
+    await save_folders([])
     useWorkspaceStore.setState({ can_restore: true })
     await useWorkspaceStore.getState().restore_folders()
     expect(useWorkspaceStore.getState().can_restore).toBe(false)
   })
 
   it('restore_folders: 許可されなければエラー', async () => {
-    await save_handles([make_handle('denied')])
+    await save_folders([{ handle: make_handle('denied'), label: '' }])
     await useWorkspaceStore.getState().restore_folders()
     expect(useWorkspaceStore.getState().error).toBeTruthy()
+  })
+
+  it('rename_workspace で表示名（ラベル）を変更する', async () => {
+    set_picker(create_mock_directory('docs', { 'a.md': 'x' }))
+    await useWorkspaceStore.getState().add_folder()
+    const id = useWorkspaceStore.getState().workspaces[0].id
+    await useWorkspaceStore.getState().rename_workspace(id, 'プロジェクトA/docs')
+    expect(useWorkspaceStore.getState().workspaces[0].label).toBe('プロジェクトA/docs')
   })
 
   it('open_file: 読み込み失敗でエラー表示する', async () => {
@@ -167,7 +179,14 @@ describe('workspaceStore', () => {
     }
     useWorkspaceStore.setState({
       workspaces: [
-        { id: 'ws-x', name: 'x', handle: {} as never, workspace: failing as never, tree: [] },
+        {
+          id: 'ws-x',
+          name: 'x',
+          label: '',
+          handle: {} as never,
+          workspace: failing as never,
+          tree: [],
+        },
       ],
       current: { workspace_id: 'ws-x', path: 'a.md' },
       content: 'x',

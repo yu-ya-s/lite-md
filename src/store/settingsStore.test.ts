@@ -1,4 +1,4 @@
-import { useSettingsStore } from './settingsStore'
+import { useSettingsStore, load_settings } from './settingsStore'
 
 const DEFAULT_SERVER = 'https://www.plantuml.com/plantuml'
 
@@ -35,5 +35,46 @@ describe('settingsStore', () => {
     useSettingsStore.getState().set_save_mode('auto')
     expect(useSettingsStore.getState().save_mode).toBe('auto')
     expect(JSON.parse(localStorage.getItem('lite-md:settings') ?? '{}').save_mode).toBe('auto')
+  })
+
+  describe('load_settings', () => {
+    it('保存済みの値をそのまま読み込む', () => {
+      localStorage.setItem(
+        'lite-md:settings',
+        JSON.stringify({ plantuml_enabled: false, plantuml_server: 'http://x', save_mode: 'auto' }),
+      )
+      expect(load_settings()).toEqual({
+        plantuml_enabled: false,
+        plantuml_server: 'http://x',
+        save_mode: 'auto',
+      })
+    })
+
+    it('不正なJSONなら既定値にフォールバックする', () => {
+      localStorage.setItem('lite-md:settings', '{壊れたJSON')
+      const settings = load_settings()
+      expect(settings.save_mode).toBe('manual')
+      expect(settings.plantuml_enabled).toBe(true)
+    })
+
+    it('一部のキーが不正でも既定値で補完する', () => {
+      localStorage.setItem(
+        'lite-md:settings',
+        JSON.stringify({ plantuml_server: 123, save_mode: 'unknown' }),
+      )
+      const settings = load_settings()
+      expect(settings.plantuml_enabled).toBe(true)
+      expect(settings.plantuml_server).toContain('plantuml.com')
+      expect(settings.save_mode).toBe('manual')
+    })
+
+    it('未保存なら既定値を返す', () => {
+      localStorage.clear()
+      expect(load_settings()).toEqual({
+        plantuml_enabled: true,
+        plantuml_server: DEFAULT_SERVER,
+        save_mode: 'manual',
+      })
+    })
   })
 })
