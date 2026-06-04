@@ -142,11 +142,11 @@ body {
   display: none;
 }
 
-/* プレビューのみのときは読みやすい幅で中央寄せにする */
+/* プレビューのみのときは読みやすい幅で中央寄せにする。
+   スクロール対象(.preview)は全幅のままにし、中身は左右パディングで中央寄せする。
+   こうすると左右の余白部分でホイールしてもスクロールできる。 */
 .app__main--preview .preview {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px 32px;
+  padding: 24px max(32px, calc((100% - 1100px) / 2));
 }
 
 .preview {
