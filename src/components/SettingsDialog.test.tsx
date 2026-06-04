@@ -7,7 +7,14 @@ describe('SettingsDialog', () => {
     useSettingsStore.setState({
       plantuml_enabled: true,
       plantuml_server: 'https://www.plantuml.com/plantuml',
+      save_mode: 'manual',
     })
+  })
+
+  it('保存モードを自動に切り替えられる', () => {
+    render(<SettingsDialog open on_close={() => {}} />)
+    fireEvent.click(screen.getByRole('radio', { name: /自動保存/ }))
+    expect(useSettingsStore.getState().save_mode).toBe('auto')
   })
 
   it('open=false なら何も表示しない', () => {

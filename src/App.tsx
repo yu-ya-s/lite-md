@@ -40,6 +40,8 @@ function read_view_mode(): ViewMode {
 function App() {
   const content = useWorkspaceStore((s) => s.content)
   const set_content = useWorkspaceStore((s) => s.set_content)
+  const current = useWorkspaceStore((s) => s.current)
+  const save = useWorkspaceStore((s) => s.save)
   const preview_source = useDebouncedValue(content, 200)
 
   const [settings_open, set_settings_open] = useState(false)
@@ -52,6 +54,17 @@ function App() {
 
   useEffect(() => {
     void useWorkspaceStore.getState().init()
+  }, [])
+
+  useEffect(() => {
+    const on_keydown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && (event.key === 's' || event.key === 'S')) {
+        event.preventDefault()
+        void useWorkspaceStore.getState().save()
+      }
+    }
+    window.addEventListener('keydown', on_keydown)
+    return () => window.removeEventListener('keydown', on_keydown)
   }, [])
 
   useEffect(() => {
@@ -111,6 +124,17 @@ function App() {
         </div>
         <div className="app__toolbar-actions">
           <SaveStatus />
+          {current && (
+            <button
+              type="button"
+              className="toolbar-btn"
+              aria-label="保存"
+              title="保存 (Ctrl+S)"
+              onClick={() => void save()}
+            >
+              💾
+            </button>
+          )}
           <button
             type="button"
             className="toolbar-btn"

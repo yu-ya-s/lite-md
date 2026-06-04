@@ -8,8 +8,10 @@ type SettingsDialogProps = {
 export function SettingsDialog({ open, on_close }: SettingsDialogProps) {
   const plantuml_enabled = useSettingsStore((s) => s.plantuml_enabled)
   const plantuml_server = useSettingsStore((s) => s.plantuml_server)
+  const save_mode = useSettingsStore((s) => s.save_mode)
   const set_plantuml_enabled = useSettingsStore((s) => s.set_plantuml_enabled)
   const set_plantuml_server = useSettingsStore((s) => s.set_plantuml_server)
+  const set_save_mode = useSettingsStore((s) => s.set_save_mode)
 
   if (!open) {
     return null
@@ -26,6 +28,28 @@ export function SettingsDialog({ open, on_close }: SettingsDialogProps) {
         </div>
 
         <div className="dialog__body">
+          <section className="settings__section">
+            <h3 className="settings__heading">保存</h3>
+            <label className="settings__row">
+              <input
+                type="radio"
+                name="save_mode"
+                checked={save_mode === 'manual'}
+                onChange={() => set_save_mode('manual')}
+              />
+              手動保存（Ctrl+S または 💾 ボタン）
+            </label>
+            <label className="settings__row">
+              <input
+                type="radio"
+                name="save_mode"
+                checked={save_mode === 'auto'}
+                onChange={() => set_save_mode('auto')}
+              />
+              自動保存（編集後しばらくで自動的に保存）
+            </label>
+          </section>
+
           <section className="settings__section">
             <h3 className="settings__heading">PlantUML</h3>
 

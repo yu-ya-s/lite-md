@@ -72,6 +72,22 @@ describe('App', () => {
     expect(screen.getByRole('separator')).toBeInTheDocument()
   })
 
+  it('ファイルを開いていると保存ボタンが表示されクリックで保存する', () => {
+    const save = vi.fn(async () => {})
+    useWorkspaceStore.setState({ current: { workspace_id: 'ws-1', path: 'a.md' }, save })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(save).toHaveBeenCalled()
+  })
+
+  it('Ctrl+S で保存を実行する', () => {
+    const save = vi.fn(async () => {})
+    useWorkspaceStore.setState({ current: { workspace_id: 'ws-1', path: 'a.md' }, save })
+    render(<App />)
+    fireEvent.keyDown(window, { key: 's', ctrlKey: true })
+    expect(save).toHaveBeenCalled()
+  })
+
   it('表示モードを「プレビューのみ」に切り替えられる', () => {
     render(<App />)
     const main = screen.getByLabelText('プレビュー').closest('.app__main') as HTMLElement

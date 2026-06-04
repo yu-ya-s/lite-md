@@ -3,9 +3,18 @@ import { create } from 'zustand'
 const STORAGE_KEY = 'lite-md:settings'
 const DEFAULT_SERVER = 'https://www.plantuml.com/plantuml'
 
+export type SaveMode = 'manual' | 'auto'
+
 type Settings = {
   plantuml_enabled: boolean
   plantuml_server: string
+  save_mode: SaveMode
+}
+
+const DEFAULTS: Settings = {
+  plantuml_enabled: true,
+  plantuml_server: DEFAULT_SERVER,
+  save_mode: 'manual',
 }
 
 function load_settings(): Settings {
@@ -15,24 +24,31 @@ function load_settings(): Settings {
       const parsed = JSON.parse(raw) as Partial<Settings>
       return {
         plantuml_enabled:
-          typeof parsed.plantuml_enabled === 'boolean' ? parsed.plantuml_enabled : true,
+          typeof parsed.plantuml_enabled === 'boolean'
+            ? parsed.plantuml_enabled
+            : DEFAULTS.plantuml_enabled,
         plantuml_server:
-          typeof parsed.plantuml_server === 'string' ? parsed.plantuml_server : DEFAULT_SERVER,
+          typeof parsed.plantuml_server === 'string'
+            ? parsed.plantuml_server
+            : DEFAULTS.plantuml_server,
+        save_mode: parsed.save_mode === 'auto' ? 'auto' : 'manual',
       }
     }
   } catch {
     // 破損時は既定値にフォールバックする
   }
-  return { plantuml_enabled: true, plantuml_server: DEFAULT_SERVER }
+  return { ...DEFAULTS }
 }
 
 type SettingsState = Settings & {
   set_plantuml_enabled: (enabled: boolean) => void
   set_plantuml_server: (server: string) => void
+  set_save_mode: (mode: SaveMode) => void
 }
 
-function persist(settings: Settings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+function persist(get: () => Settings) {
+  const { plantuml_enabled, plantuml_server, save_mode } = get()
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ plantuml_enabled, plantuml_server, save_mode }))
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -40,11 +56,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   set_plantuml_enabled: (enabled) => {
     set({ plantuml_enabled: enabled })
-    persist({ plantuml_enabled: get().plantuml_enabled, plantuml_server: get().plantuml_server })
+    persist(get)
   },
 
   set_plantuml_server: (server) => {
     set({ plantuml_server: server })
-    persist({ plantuml_enabled: get().plantuml_enabled, plantuml_server: get().plantuml_server })
+    persist(get)
+  },
+
+  set_save_mode: (mode) => {
+    set({ save_mode: mode })
+    persist(get)
   },
 }))
