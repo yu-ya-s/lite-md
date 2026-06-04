@@ -207,6 +207,29 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().save_status).toBe('error')
   })
 
+  it('toggle_done で先頭に【済】を付け、再度実行で外す', async () => {
+    set_picker(create_mock_directory('notes', { 'a.md': '# A' }))
+    await useWorkspaceStore.getState().add_folder()
+    const id = useWorkspaceStore.getState().workspaces[0].id
+    await useWorkspaceStore.getState().open_file(id, 'a.md')
+
+    await useWorkspaceStore.getState().toggle_done()
+    let state = useWorkspaceStore.getState()
+    expect(state.current?.path).toBe('【済】a.md')
+    expect(state.workspaces[0].tree.some((n) => n.name === '【済】a.md')).toBe(true)
+
+    await useWorkspaceStore.getState().toggle_done()
+    state = useWorkspaceStore.getState()
+    expect(state.current?.path).toBe('a.md')
+    expect(state.workspaces[0].tree.some((n) => n.name === 'a.md')).toBe(true)
+  })
+
+  it('toggle_done はファイル未選択なら何もしない', async () => {
+    useWorkspaceStore.setState({ current: null })
+    await useWorkspaceStore.getState().toggle_done()
+    expect(useWorkspaceStore.getState().current).toBeNull()
+  })
+
   it('save: 保存中にファイルが切り替わったら状態を上書きしない', async () => {
     let resolve_write!: () => void
     const slow_ws = {

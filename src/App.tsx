@@ -15,7 +15,7 @@ import { SettingsDialog } from './components/SettingsDialog'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { useAutoSave } from './hooks/useAutoSave'
 import { useScrollSync } from './hooks/useScrollSync'
-import { useWorkspaceStore } from './store/workspaceStore'
+import { DONE_PREFIX, useWorkspaceStore } from './store/workspaceStore'
 
 const SPLIT_KEY = 'lite-md:split'
 const COLLAPSE_KEY = 'lite-md:sidebar-collapsed'
@@ -44,7 +44,11 @@ function App() {
   const set_content = useWorkspaceStore((s) => s.set_content)
   const current = useWorkspaceStore((s) => s.current)
   const save = useWorkspaceStore((s) => s.save)
+  const toggle_done = useWorkspaceStore((s) => s.toggle_done)
   const preview_source = useDebouncedValue(content, 200)
+
+  const current_name = current?.path.split('/').pop() ?? ''
+  const is_done = current_name.startsWith(DONE_PREFIX)
 
   const [settings_open, set_settings_open] = useState(false)
   const [sidebar_collapsed, set_sidebar_collapsed] = useState(read_collapsed)
@@ -152,6 +156,18 @@ function App() {
               onClick={() => void save()}
             >
               💾
+            </button>
+          )}
+          {current && (
+            <button
+              type="button"
+              className={`toolbar-btn${is_done ? ' toolbar-btn--active' : ''}`}
+              aria-label={is_done ? '処理済みを解除' : '処理済みにする'}
+              title={is_done ? '処理済みを解除（【済】を外す）' : '処理済みにする（ファイル名の先頭に【済】）'}
+              aria-pressed={is_done}
+              onClick={() => void toggle_done()}
+            >
+              済
             </button>
           )}
           <button

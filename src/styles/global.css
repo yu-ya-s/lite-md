@@ -352,6 +352,14 @@ body {
   border-color: var(--color-accent);
 }
 
+.toolbar-btn--active {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* エディタ（ツールバー + CodeMirror）をペイン全体に広げる */
 .editor-wrap {
   display: flex;

@@ -62,8 +62,12 @@ type WorkspaceState = {
   set_content: (content: string) => void
   open_text: (content: string) => void
   save: () => Promise<void>
+  toggle_done: () => Promise<void>
   close_folder: (workspace_id: string) => Promise<void>
 }
+
+// 処理済みを表すファイル名の接頭辞
+export const DONE_PREFIX = '【済】'
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   is_supported: false,
@@ -185,6 +189,30 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       }
     } catch {
       set({ save_status: 'error', error: '保存に失敗しました' })
+    }
+  },
+
+  toggle_done: async () => {
+    const { workspaces, current } = get()
+    if (!current) return
+    const ws = workspaces.find((w) => w.id === current.workspace_id)
+    if (!ws) return
+
+    const name = current.path.split('/').pop() ?? ''
+    const next_name = name.startsWith(DONE_PREFIX)
+      ? name.slice(DONE_PREFIX.length)
+      : `${DONE_PREFIX}${name}`
+
+    try {
+      const new_path = await ws.workspace.rename_file(current.path, next_name)
+      const tree = await ws.workspace.build_tree()
+      set({
+        workspaces: get().workspaces.map((w) => (w.id === ws.id ? { ...w, tree } : w)),
+        current: { workspace_id: ws.id, path: new_path },
+        error: null,
+      })
+    } catch {
+      set({ error: 'ファイル名の変更に失敗しました' })
     }
   },
 

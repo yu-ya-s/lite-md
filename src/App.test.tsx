@@ -88,6 +88,20 @@ describe('App', () => {
     expect(save).toHaveBeenCalled()
   })
 
+  it('処理済みボタンで toggle_done を呼ぶ', () => {
+    const toggle_done = vi.fn(async () => {})
+    useWorkspaceStore.setState({ current: { workspace_id: 'ws-1', path: 'a.md' }, toggle_done })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: '処理済みにする' }))
+    expect(toggle_done).toHaveBeenCalled()
+  })
+
+  it('【済】付きファイルでは解除ラベルになる', () => {
+    useWorkspaceStore.setState({ current: { workspace_id: 'ws-1', path: '【済】a.md' } })
+    render(<App />)
+    expect(screen.getByRole('button', { name: '処理済みを解除' })).toBeInTheDocument()
+  })
+
   it('表示モードを「プレビューのみ」に切り替えられる', () => {
     render(<App />)
     const main = screen.getByLabelText('プレビュー').closest('.app__main') as HTMLElement

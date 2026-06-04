@@ -50,4 +50,22 @@ describe('FsaWorkspace', () => {
     await ws.build_tree()
     await expect(ws.write_file('missing.md', 'y')).rejects.toThrow()
   })
+
+  it('rename_file でファイル名を変更し、新しいパスで読める', async () => {
+    const root = create_mock_directory('root', { 'a.md': 'hello' })
+    const ws = new FsaWorkspace(root)
+    await ws.build_tree()
+    const new_path = await ws.rename_file('a.md', '【済】a.md')
+    expect(new_path).toBe('【済】a.md')
+    await ws.build_tree()
+    expect(await ws.read_file('【済】a.md')).toBe('hello')
+  })
+
+  it('rename_file はディレクトリ階層を保持する', async () => {
+    const root = create_mock_directory('root', { docs: { 'b.md': 'x' } })
+    const ws = new FsaWorkspace(root)
+    await ws.build_tree()
+    const new_path = await ws.rename_file('docs/b.md', '【済】b.md')
+    expect(new_path).toBe('docs/【済】b.md')
+  })
 })

@@ -55,6 +55,21 @@ export class FsaWorkspace implements WorkspaceStorage {
     return file.text()
   }
 
+  async rename_file(path: string, new_name: string): Promise<string> {
+    const handle = this.file_handles.get(path)
+    if (!handle) {
+      throw new Error(`ファイルが見つかりません: ${path}`)
+    }
+    // FileSystemFileHandle.move() は Chromium 系で同ディレクトリ内のリネームに使える
+    const movable = handle as FileSystemFileHandle & { move?: (name: string) => Promise<void> }
+    if (typeof movable.move !== 'function') {
+      throw new Error('このブラウザはファイル名の変更に対応していません')
+    }
+    await movable.move(new_name)
+    const slash = path.lastIndexOf('/')
+    return slash >= 0 ? `${path.slice(0, slash + 1)}${new_name}` : new_name
+  }
+
   async write_file(path: string, content: string): Promise<void> {
     const handle = this.file_handles.get(path)
     if (!handle) {

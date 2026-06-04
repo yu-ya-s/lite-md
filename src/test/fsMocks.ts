@@ -1,12 +1,20 @@
 // テスト用に File System Access API のハンドルを模倣するモック生成ヘルパー。
 // ネストしたオブジェクトでフォルダ構成を表現する（string=ファイル内容, object=サブフォルダ）。
+// move() によるリネームを再現するため、名前は entry オブジェクトで共有・可変にする。
 
 export type DirectorySpec = { [name: string]: string | DirectorySpec }
 
-function make_file_handle(name: string, box: { value: string }): FileSystemFileHandle {
+type Entry = {
+  name: string
+  handle: FileSystemDirectoryHandle | FileSystemFileHandle
+}
+
+function make_file_handle(entry: Entry, box: { value: string }): FileSystemFileHandle {
   return {
     kind: 'file',
-    name,
+    get name() {
+      return entry.name
+    },
     async getFile() {
       return { text: async () => box.value } as File
     },
@@ -16,7 +24,11 @@ function make_file_handle(name: string, box: { value: string }): FileSystemFileH
           box.value = data
         },
         async close() {},
+        async abort() {},
       } as unknown as FileSystemWritableFileStream
+    },
+    async move(new_name: string) {
+      entry.name = new_name
     },
     async queryPermission() {
       return 'granted' as PermissionState
@@ -28,13 +40,12 @@ function make_file_handle(name: string, box: { value: string }): FileSystemFileH
 }
 
 function make_dir_handle(name: string, spec: DirectorySpec): FileSystemDirectoryHandle {
-  const entries: [string, FileSystemDirectoryHandle | FileSystemFileHandle][] = []
+  const entries: Entry[] = []
   for (const [key, value] of Object.entries(spec)) {
-    if (typeof value === 'string') {
-      entries.push([key, make_file_handle(key, { value })])
-    } else {
-      entries.push([key, make_dir_handle(key, value)])
-    }
+    const entry: Entry = { name: key, handle: null as unknown as FileSystemFileHandle }
+    entry.handle =
+      typeof value === 'string' ? make_file_handle(entry, { value }) : make_dir_handle(key, value)
+    entries.push(entry)
   }
 
   return {
@@ -42,7 +53,7 @@ function make_dir_handle(name: string, spec: DirectorySpec): FileSystemDirectory
     name,
     async *entries() {
       for (const entry of entries) {
-        yield entry
+        yield [entry.name, entry.handle] as [string, FileSystemDirectoryHandle | FileSystemFileHandle]
       }
     },
     async queryPermission() {

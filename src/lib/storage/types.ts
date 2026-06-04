@@ -23,4 +23,6 @@ export interface WorkspaceStorage {
   build_tree(): Promise<TreeNode[]>
   read_file(path: string): Promise<string>
   write_file(path: string, content: string): Promise<void>
+  // ファイル名を変更し、変更後の相対パスを返す（同じディレクトリ内でのリネーム）
+  rename_file(path: string, new_name: string): Promise<string>
 }
