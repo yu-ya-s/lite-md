@@ -68,4 +68,11 @@ describe('FsaWorkspace', () => {
     const new_path = await ws.rename_file('docs/b.md', '【済】b.md')
     expect(new_path).toBe('docs/【済】b.md')
   })
+
+  it('last_modified は数値（更新時刻）を返す', async () => {
+    const root = create_mock_directory('root', { 'a.md': 'x' })
+    const ws = new FsaWorkspace(root)
+    await ws.build_tree()
+    expect(typeof (await ws.last_modified('a.md'))).toBe('number')
+  })
 })

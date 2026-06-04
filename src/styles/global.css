@@ -90,6 +90,18 @@ body {
   letter-spacing: 0.02em;
 }
 
+.external-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
 .app__body {
   display: flex;
   flex: 1 1 auto;

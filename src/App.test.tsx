@@ -24,6 +24,7 @@ describe('App', () => {
       is_supported: false,
       workspaces: [],
       can_restore: false,
+      external_changed: false,
       init: async () => {},
     })
   })
@@ -100,6 +101,19 @@ describe('App', () => {
     useWorkspaceStore.setState({ current: { workspace_id: 'ws-1', path: '【済】a.md' } })
     render(<App />)
     expect(screen.getByRole('button', { name: '処理済みを解除' })).toBeInTheDocument()
+  })
+
+  it('外部変更フラグが立つとバナーを表示し、再読み込みできる', () => {
+    const reload_current = vi.fn(async () => {})
+    useWorkspaceStore.setState({
+      current: { workspace_id: 'ws-1', path: 'a.md' },
+      external_changed: true,
+      reload_current,
+    })
+    render(<App />)
+    expect(screen.getByText(/外部で変更されました/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '再読み込み' }))
+    expect(reload_current).toHaveBeenCalled()
   })
 
   it('表示モードを「プレビューのみ」に切り替えられる', () => {

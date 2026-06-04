@@ -25,4 +25,6 @@ export interface WorkspaceStorage {
   write_file(path: string, content: string): Promise<void>
   // ファイル名を変更し、変更後の相対パスを返す（同じディレクトリ内でのリネーム）
   rename_file(path: string, new_name: string): Promise<string>
+  // ファイルの最終更新時刻（epoch ms）。外部変更の検知に使う
+  last_modified(path: string): Promise<number>
 }

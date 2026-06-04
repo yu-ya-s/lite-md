@@ -258,6 +258,86 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().workspaces[0].tree).toHaveLength(2)
   })
 
+  it('check_external_change: 未編集なら外部変更を自動で再読み込みする', async () => {
+    const ws_obj = {
+      read_file: async () => 'new content',
+      last_modified: async () => 200,
+    }
+    useWorkspaceStore.setState({
+      workspaces: [
+        { id: 'ws-1', name: 'n', label: '', handle: {} as never, workspace: ws_obj as never, tree: [] },
+      ],
+      current: { workspace_id: 'ws-1', path: 'a.md' },
+      content: 'old content',
+      baseline: 'old content',
+      current_mtime: 100,
+      save_status: 'saved',
+    })
+
+    await useWorkspaceStore.getState().check_external_change()
+
+    const state = useWorkspaceStore.getState()
+    expect(state.content).toBe('new content')
+    expect(state.current_mtime).toBe(200)
+    expect(state.external_changed).toBe(false)
+  })
+
+  it('check_external_change: 未保存編集があるときは上書きせず通知フラグを立てる', async () => {
+    const ws_obj = {
+      read_file: async () => 'new content',
+      last_modified: async () => 200,
+    }
+    useWorkspaceStore.setState({
+      workspaces: [
+        { id: 'ws-1', name: 'n', label: '', handle: {} as never, workspace: ws_obj as never, tree: [] },
+      ],
+      current: { workspace_id: 'ws-1', path: 'a.md' },
+      content: '編集中の内容',
+      current_mtime: 100,
+      save_status: 'dirty',
+    })
+
+    await useWorkspaceStore.getState().check_external_change()
+
+    const state = useWorkspaceStore.getState()
+    expect(state.external_changed).toBe(true)
+    expect(state.content).toBe('編集中の内容')
+  })
+
+  it('check_external_change: 更新時刻が同じなら何もしない', async () => {
+    const ws_obj = { read_file: async () => 'x', last_modified: async () => 100 }
+    useWorkspaceStore.setState({
+      workspaces: [
+        { id: 'ws-1', name: 'n', label: '', handle: {} as never, workspace: ws_obj as never, tree: [] },
+      ],
+      current: { workspace_id: 'ws-1', path: 'a.md' },
+      content: 'keep',
+      current_mtime: 100,
+      save_status: 'saved',
+    })
+    await useWorkspaceStore.getState().check_external_change()
+    expect(useWorkspaceStore.getState().content).toBe('keep')
+  })
+
+  it('reload_current: ディスクから読み直して baseline/mtime を更新する', async () => {
+    const ws_obj = { read_file: async () => 'disk content', last_modified: async () => 300 }
+    useWorkspaceStore.setState({
+      workspaces: [
+        { id: 'ws-1', name: 'n', label: '', handle: {} as never, workspace: ws_obj as never, tree: [] },
+      ],
+      current: { workspace_id: 'ws-1', path: 'a.md' },
+      content: 'editing',
+      save_status: 'dirty',
+      external_changed: true,
+    })
+    await useWorkspaceStore.getState().reload_current()
+    const state = useWorkspaceStore.getState()
+    expect(state.content).toBe('disk content')
+    expect(state.current_mtime).toBe(300)
+    expect(state.external_changed).toBe(false)
+    expect(state.save_status).toBe('saved')
+  })
+
   it('save: 保存中にファイルが切り替わったら状態を上書きしない', async () => {
     let resolve_write!: () => void
     const slow_ws = {

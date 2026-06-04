@@ -15,6 +15,7 @@ import { SettingsDialog } from './components/SettingsDialog'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { useAutoSave } from './hooks/useAutoSave'
 import { useScrollSync } from './hooks/useScrollSync'
+import { useExternalChangeWatcher } from './hooks/useExternalChangeWatcher'
 import { DONE_PREFIX, useWorkspaceStore } from './store/workspaceStore'
 
 const SPLIT_KEY = 'lite-md:split'
@@ -45,6 +46,8 @@ function App() {
   const current = useWorkspaceStore((s) => s.current)
   const save = useWorkspaceStore((s) => s.save)
   const toggle_done = useWorkspaceStore((s) => s.toggle_done)
+  const external_changed = useWorkspaceStore((s) => s.external_changed)
+  const reload_current = useWorkspaceStore((s) => s.reload_current)
   const preview_source = useDebouncedValue(content, 200)
 
   const current_name = current?.path.split('/').pop() ?? ''
@@ -87,6 +90,7 @@ function App() {
 
   useAutoSave()
   useScrollSync(editor_scroller, preview_scroller)
+  useExternalChangeWatcher()
 
   const nudge_split = (delta: number) => {
     set_split((value) => {
@@ -192,6 +196,15 @@ function App() {
           <ThemeToggle />
         </div>
       </header>
+
+      {external_changed && (
+        <div className="external-banner" role="status">
+          <span>このファイルは外部で変更されました（未保存の編集があります）。</span>
+          <button type="button" className="btn btn--subtle" onClick={() => void reload_current()}>
+            再読み込み
+          </button>
+        </div>
+      )}
 
       <div className="app__body">
         <Sidebar collapsed={sidebar_collapsed} />

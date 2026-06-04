@@ -55,6 +55,15 @@ export class FsaWorkspace implements WorkspaceStorage {
     return file.text()
   }
 
+  async last_modified(path: string): Promise<number> {
+    const handle = this.file_handles.get(path)
+    if (!handle) {
+      throw new Error(`ファイルが見つかりません: ${path}`)
+    }
+    const file = await handle.getFile()
+    return file.lastModified
+  }
+
   async rename_file(path: string, new_name: string): Promise<string> {
     const handle = this.file_handles.get(path)
     if (!handle) {

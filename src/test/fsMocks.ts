@@ -16,7 +16,7 @@ function make_file_handle(entry: Entry, box: { value: string }): FileSystemFileH
       return entry.name
     },
     async getFile() {
-      return { text: async () => box.value } as File
+      return { text: async () => box.value, lastModified: 0 } as File
     },
     async createWritable() {
       return {

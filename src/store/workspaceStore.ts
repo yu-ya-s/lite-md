@@ -50,6 +50,10 @@ type WorkspaceState = {
   current: CurrentFile | null
   content: string
   baseline: string
+  // 開いているファイルの最終更新時刻（外部変更検知用）
+  current_mtime: number | null
+  // 外部で変更されたが未保存編集があるため自動反映できない状態
+  external_changed: boolean
   save_status: SaveStatus
   can_restore: boolean
   error: string | null
@@ -64,6 +68,8 @@ type WorkspaceState = {
   open_text: (content: string) => void
   save: () => Promise<void>
   toggle_done: () => Promise<void>
+  reload_current: () => Promise<void>
+  check_external_change: () => Promise<void>
   close_folder: (workspace_id: string) => Promise<void>
 }
 
@@ -76,6 +82,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   current: null,
   content: WELCOME_CONTENT,
   baseline: WELCOME_CONTENT,
+  current_mtime: null,
+  external_changed: false,
   save_status: 'idle',
   can_restore: false,
   error: null,
@@ -170,10 +178,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!ws) return
     try {
       const content = await ws.workspace.read_file(path)
+      const mtime = await ws.workspace.last_modified(path)
       set({
         current: { workspace_id, path },
         content,
         baseline: content,
+        current_mtime: mtime,
+        external_changed: false,
         save_status: 'saved',
         error: null,
       })
@@ -187,7 +198,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   open_text: (content) => {
-    set({ content, baseline: content, current: null, save_status: 'idle' })
+    set({
+      content,
+      baseline: content,
+      current: null,
+      current_mtime: null,
+      external_changed: false,
+      save_status: 'idle',
+    })
   },
 
   save: async () => {
@@ -202,7 +220,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       // 保存中にユーザーが別ファイルへ切り替えていたら、現在の状態を上書きしない
       const now = get().current
       if (now?.workspace_id === saved.workspace_id && now.path === saved.path) {
-        set({ save_status: 'saved', baseline: content })
+        // 自分の書き込みを外部変更として誤検知しないよう、更新時刻を取り直す
+        let mtime = get().current_mtime
+        try {
+          mtime = await ws.workspace.last_modified(saved.path)
+        } catch {
+          // 取得失敗は無視（次回チェックで吸収）
+        }
+        set({ save_status: 'saved', baseline: content, current_mtime: mtime, external_changed: false })
       }
     } catch {
       set({ save_status: 'error', error: '保存に失敗しました' })
@@ -223,13 +248,68 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const new_path = await ws.workspace.rename_file(current.path, next_name)
       const tree = await ws.workspace.build_tree()
+      let mtime = get().current_mtime
+      try {
+        mtime = await ws.workspace.last_modified(new_path)
+      } catch {
+        // 取得失敗は無視
+      }
       set({
         workspaces: get().workspaces.map((w) => (w.id === ws.id ? { ...w, tree } : w)),
         current: { workspace_id: ws.id, path: new_path },
+        current_mtime: mtime,
         error: null,
       })
     } catch {
       set({ error: 'ファイル名の変更に失敗しました' })
+    }
+  },
+
+  reload_current: async () => {
+    const { workspaces, current } = get()
+    if (!current) return
+    const ws = workspaces.find((w) => w.id === current.workspace_id)
+    if (!ws) return
+    try {
+      const content = await ws.workspace.read_file(current.path)
+      const mtime = await ws.workspace.last_modified(current.path)
+      set({
+        content,
+        baseline: content,
+        current_mtime: mtime,
+        external_changed: false,
+        save_status: 'saved',
+        error: null,
+      })
+    } catch {
+      set({ error: 'ファイルの再読み込みに失敗しました' })
+    }
+  },
+
+  check_external_change: async () => {
+    const { workspaces, current, current_mtime, save_status } = get()
+    if (!current || current_mtime === null) return
+    const ws = workspaces.find((w) => w.id === current.workspace_id)
+    if (!ws) return
+
+    let mtime: number
+    try {
+      mtime = await ws.workspace.last_modified(current.path)
+    } catch {
+      return // ファイルが消えた等は無視
+    }
+    if (mtime === current_mtime) return
+
+    // 未保存編集があるときは上書きせず通知のみ。なければ自動で再読み込み
+    if (save_status === 'dirty' || save_status === 'saving') {
+      set({ external_changed: true })
+      return
+    }
+    try {
+      const content = await ws.workspace.read_file(current.path)
+      set({ content, baseline: content, current_mtime: mtime, external_changed: false, save_status: 'saved' })
+    } catch {
+      // 読み込み失敗は無視
     }
   },
 
@@ -244,6 +324,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         current: null,
         content: WELCOME_CONTENT,
         baseline: WELCOME_CONTENT,
+        current_mtime: null,
+        external_changed: false,
         save_status: 'idle',
       })
     } else {
