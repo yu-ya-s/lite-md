@@ -16,19 +16,19 @@ import { Editor } from './Editor'
 
 describe('Editor', () => {
   it('渡された値を表示する', () => {
-    render(<Editor value="hello" on_change={() => {}} />)
+    render(<Editor value="hello" baseline="hello" on_change={() => {}} />)
     expect(screen.getByTestId('cm-editor')).toHaveValue('hello')
   })
 
   it('変更時に on_change を呼ぶ', () => {
     const on_change = vi.fn()
-    render(<Editor value="hello" on_change={on_change} />)
+    render(<Editor value="hello" baseline="hello" on_change={on_change} />)
     fireEvent.change(screen.getByTestId('cm-editor'), { target: { value: 'world' } })
     expect(on_change).toHaveBeenCalledWith('world')
   })
 
   it('書式ツールバーのボタンを押してもエディタ未準備なら安全に無視する', () => {
-    render(<Editor value="hello" on_change={() => {}} />)
+    render(<Editor value="hello" baseline="hello" on_change={() => {}} />)
     expect(() =>
       fireEvent.click(screen.getByRole('button', { name: '太字 (Ctrl+B)' })),
     ).not.toThrow()

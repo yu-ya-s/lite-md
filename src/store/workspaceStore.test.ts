@@ -76,7 +76,19 @@ describe('workspaceStore', () => {
     const state = useWorkspaceStore.getState()
     expect(state.current).toEqual({ workspace_id: id, path: 'a.md' })
     expect(state.content).toBe('# Hello')
+    expect(state.baseline).toBe('# Hello')
     expect(state.save_status).toBe('saved')
+  })
+
+  it('save 成功で baseline が現在の内容に更新される（変更ハイライトの基準）', async () => {
+    set_picker(create_mock_directory('notes', { 'a.md': 'old' }))
+    await useWorkspaceStore.getState().add_folder()
+    const id = useWorkspaceStore.getState().workspaces[0].id
+    await useWorkspaceStore.getState().open_file(id, 'a.md')
+    useWorkspaceStore.getState().set_content('changed')
+    expect(useWorkspaceStore.getState().baseline).toBe('old')
+    await useWorkspaceStore.getState().save()
+    expect(useWorkspaceStore.getState().baseline).toBe('changed')
   })
 
   it('set_content で dirty になり、save で書き込んで saved になる', async () => {

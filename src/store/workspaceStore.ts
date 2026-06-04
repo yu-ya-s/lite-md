@@ -49,6 +49,7 @@ type WorkspaceState = {
   workspaces: LoadedWorkspace[]
   current: CurrentFile | null
   content: string
+  baseline: string
   save_status: SaveStatus
   can_restore: boolean
   error: string | null
@@ -69,6 +70,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   workspaces: [],
   current: null,
   content: WELCOME_CONTENT,
+  baseline: WELCOME_CONTENT,
   save_status: 'idle',
   can_restore: false,
   error: null,
@@ -147,7 +149,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!ws) return
     try {
       const content = await ws.workspace.read_file(path)
-      set({ current: { workspace_id, path }, content, save_status: 'saved', error: null })
+      set({
+        current: { workspace_id, path },
+        content,
+        baseline: content,
+        save_status: 'saved',
+        error: null,
+      })
     } catch {
       set({ error: `ファイルを開けませんでした: ${path}` })
     }
@@ -158,7 +166,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   open_text: (content) => {
-    set({ content, current: null, save_status: 'idle' })
+    set({ content, baseline: content, current: null, save_status: 'idle' })
   },
 
   save: async () => {
@@ -169,7 +177,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ save_status: 'saving' })
     try {
       await ws.workspace.write_file(current.path, content)
-      set({ save_status: 'saved' })
+      set({ save_status: 'saved', baseline: content })
     } catch {
       set({ save_status: 'error', error: '保存に失敗しました' })
     }
@@ -185,6 +193,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         workspaces: remaining,
         current: null,
         content: WELCOME_CONTENT,
+        baseline: WELCOME_CONTENT,
         save_status: 'idle',
       })
     } else {

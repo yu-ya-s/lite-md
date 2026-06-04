@@ -39,6 +39,7 @@ function read_view_mode(): ViewMode {
 
 function App() {
   const content = useWorkspaceStore((s) => s.content)
+  const baseline = useWorkspaceStore((s) => s.baseline)
   const set_content = useWorkspaceStore((s) => s.set_content)
   const current = useWorkspaceStore((s) => s.current)
   const save = useWorkspaceStore((s) => s.save)
@@ -167,7 +168,12 @@ function App() {
           style={main_style}
         >
           <section className="pane pane--editor" aria-label="エディタ">
-            <Editor value={content} on_change={set_content} on_scroller={set_editor_scroller} />
+            <Editor
+              value={content}
+              baseline={baseline}
+              on_change={set_content}
+              on_scroller={set_editor_scroller}
+            />
           </section>
           <div
             className="splitter"

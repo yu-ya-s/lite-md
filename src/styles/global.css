@@ -12,6 +12,8 @@
   --syntax-comment: #6a737d;
   --syntax-number: #005cc5;
   --syntax-title: #6f42c1;
+  --color-changed-bg: rgba(227, 160, 8, 0.12);
+  --color-changed-bar: #e3a008;
   --font-sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans',
     Meiryo, sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -33,6 +35,8 @@
   --syntax-comment: #8b949e;
   --syntax-number: #79c0ff;
   --syntax-title: #d2a8ff;
+  --color-changed-bg: rgba(210, 153, 34, 0.15);
+  --color-changed-bar: #d29922;
 }
 
 * {
@@ -390,6 +394,12 @@ body {
 .editor .cm-scroller {
   font-family: var(--font-mono);
   font-size: 14px;
+}
+
+/* 保存時点から変更された行のハイライト */
+.cm-changed-line {
+  background-color: var(--color-changed-bg);
+  box-shadow: inset 3px 0 0 var(--color-changed-bar);
 }
 
 /* プレビュー（Markdown表示） */
