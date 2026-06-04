@@ -123,4 +123,14 @@ describe('App', () => {
     expect(main.style.getPropertyValue('--editor-fr')).toBe('0.3fr')
     fireEvent.pointerUp(window)
   })
+
+  it('区切りを矢印キーで操作してエディタ幅を変えられる', () => {
+    render(<App />)
+    const separator = screen.getByRole('separator')
+    const main = separator.closest('.app__main') as HTMLElement
+    const before = parseFloat(main.style.getPropertyValue('--editor-fr'))
+    fireEvent.keyDown(separator, { key: 'ArrowLeft' })
+    const after = parseFloat(main.style.getPropertyValue('--editor-fr'))
+    expect(after).toBeLessThan(before)
+  })
 })

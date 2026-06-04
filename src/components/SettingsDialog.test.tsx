@@ -8,6 +8,7 @@ describe('SettingsDialog', () => {
       plantuml_enabled: true,
       plantuml_server: 'https://www.plantuml.com/plantuml',
       save_mode: 'manual',
+      allow_remote_images: false,
     })
   })
 
@@ -29,16 +30,29 @@ describe('SettingsDialog', () => {
     expect(useSettingsStore.getState().plantuml_server).toBe('http://localhost:8080')
   })
 
-  it('有効チェックを切り替えられる', () => {
+  it('PlantUML有効チェックを切り替えられる', () => {
     render(<SettingsDialog open on_close={() => {}} />)
-    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('checkbox', { name: /PlantUML描画/ }))
     expect(useSettingsStore.getState().plantuml_enabled).toBe(false)
+  })
+
+  it('外部画像の許可を切り替えられる', () => {
+    render(<SettingsDialog open on_close={() => {}} />)
+    fireEvent.click(screen.getByRole('checkbox', { name: /外部画像/ }))
+    expect(useSettingsStore.getState().allow_remote_images).toBe(true)
   })
 
   it('閉じるボタンで on_close を呼ぶ', () => {
     const on_close = vi.fn()
     render(<SettingsDialog open on_close={on_close} />)
     fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+    expect(on_close).toHaveBeenCalled()
+  })
+
+  it('Escキーで on_close を呼ぶ', () => {
+    const on_close = vi.fn()
+    render(<SettingsDialog open on_close={on_close} />)
+    fireEvent.keyDown(window, { key: 'Escape' })
     expect(on_close).toHaveBeenCalled()
   })
 })

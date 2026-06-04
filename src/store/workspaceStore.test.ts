@@ -207,6 +207,32 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().save_status).toBe('error')
   })
 
+  it('save: 保存中にファイルが切り替わったら状態を上書きしない', async () => {
+    let resolve_write!: () => void
+    const slow_ws = {
+      write_file: () =>
+        new Promise<void>((resolve) => {
+          resolve_write = resolve
+        }),
+    }
+    useWorkspaceStore.setState({
+      workspaces: [
+        { id: 'ws-x', name: 'x', label: '', handle: {} as never, workspace: slow_ws as never, tree: [] },
+      ],
+      current: { workspace_id: 'ws-x', path: 'a.md' },
+      content: 'new content',
+    })
+
+    const saving = useWorkspaceStore.getState().save()
+    // 保存完了前に別ファイルへ切り替える
+    useWorkspaceStore.setState({ current: { workspace_id: 'ws-x', path: 'b.md' } })
+    resolve_write()
+    await saving
+
+    // 'a.md' の保存完了が 'b.md' の状態（baseline）を上書きしていないこと
+    expect(useWorkspaceStore.getState().baseline).not.toBe('new content')
+  })
+
   it('close_folder: 対象フォルダを取り除く', async () => {
     set_picker(create_mock_directory('notes', { 'a.md': 'x' }))
     await useWorkspaceStore.getState().add_folder()

@@ -72,10 +72,16 @@
 - ユーザー判断により不要のためスキップ（2026-06-03）
 - 必要になったら再開: `.md` ダウンロード、自己完結HTML（CSS・描画済みSVG埋め込み）
 
-### Phase 7: 仕上げ・検証
-- [ ] レスポンシブ、空状態、エラーハンドリング、アクセシビリティ
-- [ ] カバレッジ80%以上、クリティカルフローのE2E（Playwright）
-- [ ] README整備、code-reviewer / security-reviewer レビュー → コミット ✅📝
+### Phase 7: 仕上げ・検証（進行中）
+- [x] セルフコードレビュー（code-reviewer + security-reviewer 並列）→ 指摘修正
+  - 堅牢性: write_file の abort、IndexedDB tx の onerror/onabort、save中のファイル切替ガード、図描画の stale ガード
+  - セキュリティ/プライバシー: 外部画像を既定ブロック＋設定でオプトイン、PlantUMLサーバーURLのhttp/https検証、Mermaid SVGサニタイズ、mermaidキャッシュ上限
+  - レビュー結果は Windows 側の レビュー結果フォルダにも保存
+- [x] アクセシビリティ点検: 設定ダイアログ Esc/フォーカス、splitter キーボード操作（矢印キー・ARIA値）、コントラスト改善、エラー色の変数化
+- [x] カバレッジ80%以上維持（128件・分岐81.9%）
+- [ ] README整備
+- [ ] Vercel配信設定（CSP/セキュリティヘッダ含む）
+- [ ] （任意）クリティカルフローのE2E（Playwright）
 
 ### Phase 8: 配信設定
 - [ ] 静的ビルド、Vercelデプロイ設定、READMEにデプロイ手順 → コミット 🔧

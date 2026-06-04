@@ -52,6 +52,15 @@ describe('render_diagrams', () => {
     expect(container.textContent).toContain('未有効')
   })
 
+  it('PlantUMLサーバーURLが http/https でなければ img を作らずエラー表示', async () => {
+    const container = make_container(
+      '<div class="lite-md-diagram lite-md-plantuml" data-source="@startuml@enduml">x</div>',
+    )
+    await render_diagrams(container, { plantuml_enabled: true, plantuml_server: 'javascript:alert(1)' })
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.textContent).toContain('不正')
+  })
+
   it('サーバーURL末尾のスラッシュは正規化する', async () => {
     const container = make_container(
       '<div class="lite-md-diagram lite-md-plantuml" data-source="ab">x</div>',

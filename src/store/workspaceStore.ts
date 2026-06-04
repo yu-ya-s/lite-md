@@ -174,10 +174,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!current) return
     const ws = workspaces.find((w) => w.id === current.workspace_id)
     if (!ws) return
+    const saved = current
     set({ save_status: 'saving' })
     try {
-      await ws.workspace.write_file(current.path, content)
-      set({ save_status: 'saved', baseline: content })
+      await ws.workspace.write_file(saved.path, content)
+      // 保存中にユーザーが別ファイルへ切り替えていたら、現在の状態を上書きしない
+      const now = get().current
+      if (now?.workspace_id === saved.workspace_id && now.path === saved.path) {
+        set({ save_status: 'saved', baseline: content })
+      }
     } catch {
       set({ save_status: 'error', error: '保存に失敗しました' })
     }

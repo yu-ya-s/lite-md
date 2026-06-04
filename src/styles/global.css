@@ -14,6 +14,8 @@
   --syntax-title: #6f42c1;
   --color-changed-bg: rgba(227, 160, 8, 0.12);
   --color-changed-bar: #e3a008;
+  --color-error: #c0392b;
+  --color-dirty: #9a6d00;
   --font-sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans',
     Meiryo, sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -37,6 +39,8 @@
   --syntax-title: #d2a8ff;
   --color-changed-bg: rgba(210, 153, 34, 0.15);
   --color-changed-bar: #d29922;
+  --color-error: #ff6b6b;
+  --color-dirty: #e3b341;
 }
 
 * {
@@ -128,8 +132,10 @@ body {
   touch-action: none;
 }
 
-.splitter:hover {
+.splitter:hover,
+.splitter:focus-visible {
   background-color: var(--color-accent);
+  outline: none;
 }
 
 /* プレビューのみモード: エディタと区切りを隠して1カラムに */
@@ -243,7 +249,7 @@ body {
 }
 
 .sidebar__error {
-  color: #d33;
+  color: var(--color-error);
   font-size: 13px;
   margin: 4px 0;
 }
@@ -308,7 +314,7 @@ body {
 }
 
 .save-status__badge--dirty {
-  color: #c08a00;
+  color: var(--color-dirty);
 }
 
 .save-status__badge--saved {
@@ -316,7 +322,7 @@ body {
 }
 
 .save-status__badge--error {
-  color: #d33;
+  color: var(--color-error);
 }
 
 .app__toolbar-actions {
@@ -542,7 +548,18 @@ body {
 }
 
 .lite-md-diagram--error {
-  color: #d33;
+  color: var(--color-error);
+}
+
+/* 外部画像ブロック時のプレースホルダ表示 */
+.markdown-body img[data-blocked-src] {
+  display: inline-block;
+  min-width: 140px;
+  padding: 6px 10px;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
 /* 設定ダイアログ */

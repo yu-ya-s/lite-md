@@ -32,6 +32,9 @@ function run_tx<T>(
         const request = run(tx.objectStore(STORE_NAME))
         request.onsuccess = () => resolve(request.result as T)
         request.onerror = () => reject(request.error)
+        // quota超過などで request を経由せず tx 自体が中断した場合に未解決でハングしないようにする
+        tx.onerror = () => reject(tx.error)
+        tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'))
         tx.oncomplete = () => db.close()
       }),
   )

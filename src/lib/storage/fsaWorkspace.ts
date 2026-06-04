@@ -61,7 +61,13 @@ export class FsaWorkspace implements WorkspaceStorage {
       throw new Error(`ファイルが見つかりません: ${path}`)
     }
     const writable = await handle.createWritable()
-    await writable.write(content)
-    await writable.close()
+    try {
+      await writable.write(content)
+      await writable.close()
+    } catch (e) {
+      // 書き込み失敗時は書きかけを確定させず、確実にストリームを破棄する
+      await writable.abort().catch(() => {})
+      throw e
+    }
   }
 }

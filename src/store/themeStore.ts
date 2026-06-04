@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { reset_mermaid } from '../lib/markdown/diagrams'
 
 export type Theme = 'light' | 'dark'
 
@@ -30,6 +31,8 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   toggle_theme: () => {
     const next = get().theme === 'light' ? 'dark' : 'light'
     apply_theme(next)
+    // Mermaid を次回描画で新テーマで再初期化させる
+    reset_mermaid()
     set({ theme: next })
   },
 }))

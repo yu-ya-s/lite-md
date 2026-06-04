@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { ThemeToggle } from './components/ThemeToggle'
@@ -82,6 +83,23 @@ function App() {
 
   useAutoSave()
   useScrollSync(editor_scroller, preview_scroller)
+
+  const nudge_split = (delta: number) => {
+    set_split((value) => {
+      const next = Math.round((value + delta) * 100) / 100
+      return Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, next))
+    })
+  }
+
+  const on_splitter_key = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+      event.preventDefault()
+      nudge_split(-0.02)
+    } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      nudge_split(0.02)
+    }
+  }
 
   const start_drag = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -178,9 +196,14 @@ function App() {
           <div
             className="splitter"
             role="separator"
+            tabIndex={0}
             aria-orientation="vertical"
             aria-label="エディタとプレビューの幅を調整"
+            aria-valuemin={Math.round(MIN_SPLIT * 100)}
+            aria-valuemax={Math.round(MAX_SPLIT * 100)}
+            aria-valuenow={Math.round(split * 100)}
             onPointerDown={start_drag}
+            onKeyDown={on_splitter_key}
           />
           <section className="pane pane--preview" aria-label="プレビュー">
             <Preview markdown={preview_source} on_container={set_preview_scroller} />

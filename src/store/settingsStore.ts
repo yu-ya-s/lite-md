@@ -9,12 +9,15 @@ type Settings = {
   plantuml_enabled: boolean
   plantuml_server: string
   save_mode: SaveMode
+  allow_remote_images: boolean
 }
 
 const DEFAULTS: Settings = {
   plantuml_enabled: true,
   plantuml_server: DEFAULT_SERVER,
   save_mode: 'manual',
+  // 外部送信ゼロを守るため、外部画像は既定で読み込まない
+  allow_remote_images: false,
 }
 
 export function load_settings(): Settings {
@@ -32,6 +35,8 @@ export function load_settings(): Settings {
             ? parsed.plantuml_server
             : DEFAULTS.plantuml_server,
         save_mode: parsed.save_mode === 'auto' ? 'auto' : 'manual',
+        allow_remote_images:
+          typeof parsed.allow_remote_images === 'boolean' ? parsed.allow_remote_images : false,
       }
     }
   } catch {
@@ -44,11 +49,15 @@ type SettingsState = Settings & {
   set_plantuml_enabled: (enabled: boolean) => void
   set_plantuml_server: (server: string) => void
   set_save_mode: (mode: SaveMode) => void
+  set_allow_remote_images: (allow: boolean) => void
 }
 
 function persist(get: () => Settings) {
-  const { plantuml_enabled, plantuml_server, save_mode } = get()
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ plantuml_enabled, plantuml_server, save_mode }))
+  const { plantuml_enabled, plantuml_server, save_mode, allow_remote_images } = get()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ plantuml_enabled, plantuml_server, save_mode, allow_remote_images }),
+  )
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -66,6 +75,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   set_save_mode: (mode) => {
     set({ save_mode: mode })
+    persist(get)
+  },
+
+  set_allow_remote_images: (allow) => {
+    set({ allow_remote_images: allow })
     persist(get)
   },
 }))

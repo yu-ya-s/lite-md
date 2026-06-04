@@ -49,4 +49,22 @@ describe('render_markdown', () => {
     const html = render_markdown('```js\nconst x = 1\n```')
     expect(html).toContain('language-js')
   })
+
+  it('既定では外部画像のsrcを無効化する（外部送信ゼロ）', () => {
+    const html = render_markdown('![alt](https://tracker.example.com/pixel.gif)')
+    // 実srcは消え、data-blocked-src に退避される（先頭スペース付きで実src属性のみを判定）
+    expect(html).not.toContain(' src="https://tracker.example.com')
+    expect(html).toContain('data-blocked-src="https://tracker.example.com')
+  })
+
+  it('allow_images=true なら外部画像を許可する', () => {
+    const html = render_markdown('![alt](https://example.com/a.png)', true)
+    expect(html).toContain('src="https://example.com/a.png"')
+    expect(html).not.toContain('data-blocked-src')
+  })
+
+  it('data: 画像は既定でも許可する', () => {
+    const html = render_markdown('![x](data:image/png;base64,iVBORw0KGgo=)')
+    expect(html).toContain('src="data:image/png')
+  })
 })

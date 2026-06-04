@@ -9,14 +9,24 @@ describe('settingsStore', () => {
       plantuml_enabled: true,
       plantuml_server: DEFAULT_SERVER,
       save_mode: 'manual',
+      allow_remote_images: false,
     })
   })
 
-  it('デフォルトでPlantUMLは有効・公式サーバー・手動保存', () => {
+  it('デフォルトでPlantUMLは有効・公式サーバー・手動保存・外部画像オフ', () => {
     const state = useSettingsStore.getState()
     expect(state.plantuml_enabled).toBe(true)
     expect(state.plantuml_server).toContain('plantuml.com')
     expect(state.save_mode).toBe('manual')
+    expect(state.allow_remote_images).toBe(false)
+  })
+
+  it('外部画像の許可設定がlocalStorageに永続化される', () => {
+    useSettingsStore.getState().set_allow_remote_images(true)
+    expect(useSettingsStore.getState().allow_remote_images).toBe(true)
+    expect(JSON.parse(localStorage.getItem('lite-md:settings') ?? '{}').allow_remote_images).toBe(
+      true,
+    )
   })
 
   it('サーバーURLの変更がlocalStorageに永続化される', () => {
@@ -41,12 +51,18 @@ describe('settingsStore', () => {
     it('保存済みの値をそのまま読み込む', () => {
       localStorage.setItem(
         'lite-md:settings',
-        JSON.stringify({ plantuml_enabled: false, plantuml_server: 'http://x', save_mode: 'auto' }),
+        JSON.stringify({
+          plantuml_enabled: false,
+          plantuml_server: 'http://x',
+          save_mode: 'auto',
+          allow_remote_images: true,
+        }),
       )
       expect(load_settings()).toEqual({
         plantuml_enabled: false,
         plantuml_server: 'http://x',
         save_mode: 'auto',
+        allow_remote_images: true,
       })
     })
 
@@ -74,6 +90,7 @@ describe('settingsStore', () => {
         plantuml_enabled: true,
         plantuml_server: DEFAULT_SERVER,
         save_mode: 'manual',
+        allow_remote_images: false,
       })
     })
   })
