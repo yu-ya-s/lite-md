@@ -12,6 +12,7 @@ import { Preview } from './components/Preview'
 import { Sidebar } from './components/Sidebar'
 import { SaveStatus } from './components/SaveStatus'
 import { SettingsDialog } from './components/SettingsDialog'
+import { HelpDialog } from './components/HelpDialog'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { useAutoSave } from './hooks/useAutoSave'
 import { useScrollSync } from './hooks/useScrollSync'
@@ -21,6 +22,7 @@ import { DONE_PREFIX, useWorkspaceStore } from './store/workspaceStore'
 const SPLIT_KEY = 'lite-md:split'
 const COLLAPSE_KEY = 'lite-md:sidebar-collapsed'
 const VIEW_KEY = 'lite-md:view-mode'
+const HELP_SEEN_KEY = 'lite-md:help-seen'
 const MIN_SPLIT = 0.15
 const MAX_SPLIT = 0.85
 
@@ -39,6 +41,10 @@ function read_view_mode(): ViewMode {
   return localStorage.getItem(VIEW_KEY) === 'preview' ? 'preview' : 'split'
 }
 
+function read_help_seen(): boolean {
+  return localStorage.getItem(HELP_SEEN_KEY) === '1'
+}
+
 function App() {
   const content = useWorkspaceStore((s) => s.content)
   const baseline = useWorkspaceStore((s) => s.baseline)
@@ -54,6 +60,7 @@ function App() {
   const is_done = current_name.startsWith(DONE_PREFIX)
 
   const [settings_open, set_settings_open] = useState(false)
+  const [help_open, set_help_open] = useState(false)
   const [sidebar_collapsed, set_sidebar_collapsed] = useState(read_collapsed)
   const [view_mode, set_view_mode] = useState<ViewMode>(read_view_mode)
   const [split, set_split] = useState(read_split)
@@ -63,6 +70,14 @@ function App() {
 
   useEffect(() => {
     void useWorkspaceStore.getState().init()
+  }, [])
+
+  // 初回アクセス時のみヘルプを自動表示し、表示済みフラグを即座に立てる
+  useEffect(() => {
+    if (!read_help_seen()) {
+      set_help_open(true)
+      localStorage.setItem(HELP_SEEN_KEY, '1')
+    }
   }, [])
 
   useEffect(() => {
@@ -193,6 +208,15 @@ function App() {
           >
             ⚙
           </button>
+          <button
+            type="button"
+            className="toolbar-btn"
+            aria-label="ヘルプ"
+            title="ヘルプ"
+            onClick={() => set_help_open(true)}
+          >
+            ?
+          </button>
           <ThemeToggle />
         </div>
       </header>
@@ -241,6 +265,7 @@ function App() {
       </div>
 
       <SettingsDialog open={settings_open} on_close={() => set_settings_open(false)} />
+      <HelpDialog open={help_open} on_close={() => set_help_open(false)} />
     </div>
   )
 }

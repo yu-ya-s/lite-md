@@ -16,6 +16,10 @@ import App from './App'
 
 describe('App', () => {
   beforeEach(() => {
+    // ヘルプ自動表示を既定で抑止し、既存テストの挙動を不変に保つ
+    localStorage.clear()
+    localStorage.setItem('lite-md:help-seen', '1')
+
     // ストアを既知の状態へ。init はテストでは副作用を起こさないよう no-op にする
     useWorkspaceStore.setState({
       content: '',
@@ -27,6 +31,10 @@ describe('App', () => {
       external_changed: false,
       init: async () => {},
     })
+  })
+
+  afterEach(() => {
+    localStorage.clear()
   })
 
   it('ツールバーにアプリタイトルを表示する', () => {
@@ -160,5 +168,68 @@ describe('App', () => {
     fireEvent.keyDown(separator, { key: 'ArrowLeft' })
     const after = parseFloat(main.style.getPropertyValue('--editor-fr'))
     expect(after).toBeLessThan(before)
+  })
+
+  // テスト 12: 初回アクセスでヘルプが自動表示される
+  it('初回アクセス（フラグなし）でヘルプを自動表示する', () => {
+    localStorage.removeItem('lite-md:help-seen')
+    render(<App />)
+    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
+  })
+
+  // テスト 13: 自動表示後に localStorage フラグが '1' になる
+  it('自動表示後に localStorage フラグが "1" になる', () => {
+    localStorage.removeItem('lite-md:help-seen')
+    render(<App />)
+    expect(localStorage.getItem('lite-md:help-seen')).toBe('1')
+  })
+
+  // テスト 14: フラグありでヘルプは自動表示されない。? ボタンは存在する
+  it('フラグありでヘルプは自動表示されない。? ボタンは存在する', () => {
+    // beforeEach でフラグが立っているので追加設定不要
+    render(<App />)
+    expect(screen.queryByRole('dialog', { name: 'ヘルプ' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'ヘルプ' })).toBeInTheDocument()
+  })
+
+  // テスト 15: ? ボタンクリックでヘルプが開く
+  it('? ボタンクリックでヘルプが開く', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'ヘルプ' }))
+    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
+  })
+
+  // テスト 16: current が null でも ? ボタンは常時表示される
+  it('current が null でも ? ボタンは常時表示される', () => {
+    useWorkspaceStore.setState({ current: null })
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'ヘルプ' })).toBeInTheDocument()
+  })
+
+  // テスト 17: ヘルプを開いて閉じるボタンで閉じると dialog が消える
+  it('ヘルプを開いて閉じるボタンで閉じると dialog が消える', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'ヘルプ' }))
+    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+    expect(screen.queryByRole('dialog', { name: 'ヘルプ' })).toBeNull()
+  })
+
+  // テスト 18: 手動で開閉してもフラグは変化しない
+  it('手動表示はフラグを変えない', () => {
+    // フラグが '1' の状態で手動表示
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'ヘルプ' }))
+    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+    expect(localStorage.getItem('lite-md:help-seen')).toBe('1')
+  })
+
+  // テスト 19: localStorage 値が '0' のとき自動表示され、その後 '1' に上書きされる
+  it('localStorage 値が "0" のとき自動表示されフラグが "1" に上書きされる', () => {
+    localStorage.setItem('lite-md:help-seen', '0')
+    render(<App />)
+    // '0' === '1' は false なので自動表示される
+    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
+    expect(localStorage.getItem('lite-md:help-seen')).toBe('1')
   })
 })
