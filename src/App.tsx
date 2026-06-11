@@ -15,6 +15,7 @@ import { SaveStatus } from './components/SaveStatus'
 import { SettingsDialog } from './components/SettingsDialog'
 import { TutorialTour } from './components/TutorialTour'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
+import { toggle_task_line } from './lib/markdown/taskLists'
 import { useAutoSave } from './hooks/useAutoSave'
 import { useScrollSync } from './hooks/useScrollSync'
 import { useExternalChangeWatcher } from './hooks/useExternalChangeWatcher'
@@ -63,6 +64,16 @@ function App() {
   const [settings_open, set_settings_open] = useState(false)
   const [tour_active, set_tour_active] = useState(false)
   const close_tour = useCallback(() => set_tour_active(false), [])
+
+  // プレビューのチェックボックス切替。プレビューはデバウンス済みソースを表示しているため、
+  // 最新の content を store から取り直し、タスク行であることを検証してから反転する
+  const on_toggle_task = useCallback((line: number) => {
+    const state = useWorkspaceStore.getState()
+    const updated = toggle_task_line(state.content, line)
+    if (updated !== null) {
+      state.set_content(updated)
+    }
+  }, [])
   const [sidebar_collapsed, set_sidebar_collapsed] = useState(read_collapsed)
   const [view_mode, set_view_mode] = useState<ViewMode>(read_view_mode)
   const [split, set_split] = useState(read_split)
@@ -264,7 +275,11 @@ function App() {
             onKeyDown={on_splitter_key}
           />
           <section className="pane pane--preview" aria-label="プレビュー">
-            <Preview markdown={preview_source} on_container={set_preview_scroller} />
+            <Preview
+              markdown={preview_source}
+              on_container={set_preview_scroller}
+              on_toggle_task={on_toggle_task}
+            />
           </section>
         </main>
       </div>

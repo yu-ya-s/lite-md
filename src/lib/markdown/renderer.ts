@@ -1,5 +1,6 @@
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
+import { task_lists_plugin } from './taskLists'
 
 // html: true で生HTMLを許可するが、出力は必ず DOMPurify でサニタイズしてXSSを防ぐ。
 // シンタックスハイライトは初期バンドルを軽く保つため、描画後に diagrams.ts 側で
@@ -8,7 +9,7 @@ const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: false,
-})
+}).use(task_lists_plugin)
 
 const default_fence = md.renderer.rules.fence!
 

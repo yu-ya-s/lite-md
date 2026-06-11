@@ -519,6 +519,18 @@ body {
   max-width: 100%;
 }
 
+/* タスクリスト（- [ ] / - [x]） */
+.markdown-body li.task-list-item {
+  list-style: none;
+}
+
+.markdown-body li.task-list-item input.task-list-checkbox {
+  margin: 0 0.4em 0.15em -1.4em;
+  vertical-align: middle;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
 /* シンタックスハイライト（highlight.js のトークンをCSS変数で着色しテーマ追従） */
 .hljs-keyword,
 .hljs-built_in,

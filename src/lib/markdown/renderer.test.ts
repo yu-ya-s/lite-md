@@ -67,4 +67,12 @@ describe('render_markdown', () => {
     const html = render_markdown('![x](data:image/png;base64,iVBORw0KGgo=)')
     expect(html).toContain('src="data:image/png')
   })
+
+  it('タスクリストをチェックボックスとして描画する（サニタイズ後も保持）', () => {
+    const html = render_markdown('- [ ] 未完了\n- [x] 完了')
+    expect(html).toContain('task-list-checkbox')
+    expect(html).toContain('data-line="0"')
+    expect(html).toContain('data-line="1"')
+    expect(html).toContain('checked')
+  })
 })

@@ -291,4 +291,33 @@ describe('App', () => {
     expect(localStorage.getItem('lite-md:help-seen')).toBe('1')
     restore_tour_visibility()
   })
+
+  // テスト 20: プレビューのチェックボックス切替がエディタのソースに反映される
+  it('プレビューのチェックボックスをクリックするとソースの [ ] が [x] に切り替わる', async () => {
+    render(<App />)
+    fireEvent.change(screen.getByTestId('cm-editor'), {
+      target: { value: '- [ ] 牛乳を買う\n- [x] 掃除する' },
+    })
+    // プレビューはデバウンス（200ms）後に描画される
+    const boxes = await waitFor(() => {
+      const found = screen.getAllByRole('checkbox')
+      expect(found).toHaveLength(2)
+      return found
+    })
+    fireEvent.click(boxes[0])
+    await waitFor(() => {
+      expect(screen.getByTestId('cm-editor')).toHaveValue('- [x] 牛乳を買う\n- [x] 掃除する')
+    })
+    // チェック済み側も解除方向に切り替わる。クリック直後の古いDOMではなく、
+    // デバウンス再描画後の新DOM（checked が属性として付く）を待ってから操作する
+    const boxes_after = await waitFor(() => {
+      const found = screen.getAllByRole('checkbox')
+      expect(found[0]).toHaveAttribute('checked')
+      return found
+    })
+    fireEvent.click(boxes_after[1])
+    await waitFor(() => {
+      expect(screen.getByTestId('cm-editor')).toHaveValue('- [x] 牛乳を買う\n- [ ] 掃除する')
+    })
+  })
 })
