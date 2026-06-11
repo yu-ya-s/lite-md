@@ -1,6 +1,41 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { useWorkspaceStore } from './store/workspaceStore'
 
+// jsdom では offsetParent が常に null / getBoundingClientRect が全0のため、
+// ツアー dialog 表示を検証するテストにのみ個別に可視化モックを適用するヘルパ
+
+// 復元用に jsdom 本来の offsetParent ディスクリプタを保持する
+const offset_parent_descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent')
+
+function enable_tour_visibility(): void {
+  Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+    configurable: true,
+    get() {
+      return document.body
+    },
+  })
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    left: 100,
+    top: 100,
+    right: 200,
+    bottom: 140,
+    width: 100,
+    height: 40,
+    x: 100,
+    y: 100,
+    toJSON: () => ({}),
+  } as DOMRect)
+}
+
+function restore_tour_visibility(): void {
+  vi.restoreAllMocks()
+  if (offset_parent_descriptor) {
+    Object.defineProperty(HTMLElement.prototype, 'offsetParent', offset_parent_descriptor)
+  } else {
+    delete (HTMLElement.prototype as unknown as { offsetParent?: unknown }).offsetParent
+  }
+}
+
 // App は内部で CodeMirror を描画するため、jsdom で安定動作する textarea に差し替える
 vi.mock('@uiw/react-codemirror', () => ({
   default: ({ value, onChange }: { value: string; onChange?: (v: string) => void }) => (
@@ -170,33 +205,44 @@ describe('App', () => {
     expect(after).toBeLessThan(before)
   })
 
-  // テスト 12: 初回アクセスでヘルプが自動表示される
-  it('初回アクセス（フラグなし）でヘルプを自動表示する', () => {
+  // テスト 12: 初回アクセスでツアーが自動表示される
+  it('初回アクセス（フラグなし）でツアーを自動表示する', async () => {
     localStorage.removeItem('lite-md:help-seen')
+    enable_tour_visibility()
     render(<App />)
-    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'チュートリアル' })
+    expect(dialog).toBeInTheDocument()
+    // is_supported=false で js-tour-open-folder は DOM にないためステップ1スキップ
+    // → 先頭の可視ステップは書式ツールバー
+    expect(screen.getByText('書式ツールバー')).toBeInTheDocument()
+    restore_tour_visibility()
   })
 
   // テスト 13: 自動表示後に localStorage フラグが '1' になる
   it('自動表示後に localStorage フラグが "1" になる', () => {
     localStorage.removeItem('lite-md:help-seen')
+    // フラグの立ち上がりはツアー描画と独立しているため可視化不要
     render(<App />)
     expect(localStorage.getItem('lite-md:help-seen')).toBe('1')
   })
 
-  // テスト 14: フラグありでヘルプは自動表示されない。? ボタンは存在する
-  it('フラグありでヘルプは自動表示されない。? ボタンは存在する', () => {
+  // テスト 14: フラグありでツアーは自動表示されない。? ボタンは存在する
+  it('フラグありでツアーは自動表示されない。? ボタンは存在する', () => {
     // beforeEach でフラグが立っているので追加設定不要
     render(<App />)
-    expect(screen.queryByRole('dialog', { name: 'ヘルプ' })).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'チュートリアル' })).toBeNull()
     expect(screen.getByRole('button', { name: 'ヘルプ' })).toBeInTheDocument()
   })
 
-  // テスト 15: ? ボタンクリックでヘルプが開く
-  it('? ボタンクリックでヘルプが開く', () => {
+  // テスト 15: ? ボタンクリックでツアーが開く
+  it('? ボタンクリックでツアーが開く', async () => {
+    enable_tour_visibility()
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'ヘルプ' }))
-    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'チュートリアル' })
+    expect(dialog).toBeInTheDocument()
+    expect(screen.getByText('書式ツールバー')).toBeInTheDocument()
+    restore_tour_visibility()
   })
 
   // テスト 16: current が null でも ? ボタンは常時表示される
@@ -206,30 +252,43 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'ヘルプ' })).toBeInTheDocument()
   })
 
-  // テスト 17: ヘルプを開いて閉じるボタンで閉じると dialog が消える
-  it('ヘルプを開いて閉じるボタンで閉じると dialog が消える', () => {
+  // テスト 17: ツアーを開いて閉じるボタンで閉じると dialog が消える
+  it('ツアーを開いて閉じるボタンで閉じると dialog が消える', async () => {
+    enable_tour_visibility()
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'ヘルプ' }))
-    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
-    expect(screen.queryByRole('dialog', { name: 'ヘルプ' })).toBeNull()
+    await screen.findByRole('dialog', { name: 'チュートリアル' })
+    fireEvent.click(screen.getByRole('button', { name: 'チュートリアルを閉じる' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'チュートリアル' })).toBeNull()
+    })
+    restore_tour_visibility()
   })
 
   // テスト 18: 手動で開閉してもフラグは変化しない
-  it('手動表示はフラグを変えない', () => {
+  it('手動表示はフラグを変えない', async () => {
+    enable_tour_visibility()
     // フラグが '1' の状態で手動表示
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'ヘルプ' }))
-    fireEvent.click(screen.getByRole('button', { name: '閉じる' }))
+    await screen.findByRole('dialog', { name: 'チュートリアル' })
+    fireEvent.click(screen.getByRole('button', { name: 'チュートリアルを閉じる' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'チュートリアル' })).toBeNull()
+    })
     expect(localStorage.getItem('lite-md:help-seen')).toBe('1')
+    restore_tour_visibility()
   })
 
   // テスト 19: localStorage 値が '0' のとき自動表示され、その後 '1' に上書きされる
-  it('localStorage 値が "0" のとき自動表示されフラグが "1" に上書きされる', () => {
+  it('localStorage 値が "0" のとき自動表示されフラグが "1" に上書きされる', async () => {
     localStorage.setItem('lite-md:help-seen', '0')
+    enable_tour_visibility()
     render(<App />)
     // '0' === '1' は false なので自動表示される
-    expect(screen.getByRole('dialog', { name: 'ヘルプ' })).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'チュートリアル' })
+    expect(dialog).toBeInTheDocument()
     expect(localStorage.getItem('lite-md:help-seen')).toBe('1')
+    restore_tour_visibility()
   })
 })

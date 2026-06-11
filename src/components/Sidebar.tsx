@@ -88,7 +88,12 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       {is_supported ? (
         <>
           <div className="sidebar__actions">
-            <button type="button" className="btn" onClick={() => void add_folder()}>
+            <button
+              id="js-tour-open-folder"
+              type="button"
+              className="btn"
+              onClick={() => void add_folder()}
+            >
               フォルダを追加
             </button>
             {can_restore && (

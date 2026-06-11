@@ -25,7 +25,7 @@ const BUTTONS: { label: string; title: string; command: Command }[] = [
 
 export function EditorToolbar({ run }: EditorToolbarProps) {
   return (
-    <div className="editor-toolbar" role="toolbar" aria-label="書式ツールバー">
+    <div id="js-tour-format-toolbar" className="editor-toolbar" role="toolbar" aria-label="書式ツールバー">
       {BUTTONS.map((button) => (
         <button
           key={button.title}

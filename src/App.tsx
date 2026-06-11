@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -12,7 +13,7 @@ import { Preview } from './components/Preview'
 import { Sidebar } from './components/Sidebar'
 import { SaveStatus } from './components/SaveStatus'
 import { SettingsDialog } from './components/SettingsDialog'
-import { HelpDialog } from './components/HelpDialog'
+import { TutorialTour } from './components/TutorialTour'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { useAutoSave } from './hooks/useAutoSave'
 import { useScrollSync } from './hooks/useScrollSync'
@@ -60,7 +61,8 @@ function App() {
   const is_done = current_name.startsWith(DONE_PREFIX)
 
   const [settings_open, set_settings_open] = useState(false)
-  const [help_open, set_help_open] = useState(false)
+  const [tour_active, set_tour_active] = useState(false)
+  const close_tour = useCallback(() => set_tour_active(false), [])
   const [sidebar_collapsed, set_sidebar_collapsed] = useState(read_collapsed)
   const [view_mode, set_view_mode] = useState<ViewMode>(read_view_mode)
   const [split, set_split] = useState(read_split)
@@ -72,10 +74,10 @@ function App() {
     void useWorkspaceStore.getState().init()
   }, [])
 
-  // 初回アクセス時のみヘルプを自動表示し、表示済みフラグを即座に立てる
+  // 初回アクセス時のみチュートリアルツアーを自動開始し、表示済みフラグを即座に立てる
   useEffect(() => {
     if (!read_help_seen()) {
-      set_help_open(true)
+      set_tour_active(true)
       localStorage.setItem(HELP_SEEN_KEY, '1')
     }
   }, [])
@@ -164,7 +166,7 @@ function App() {
           </button>
           <h1 className="app__title">lite-md</h1>
         </div>
-        <div className="app__toolbar-actions">
+        <div className="app__toolbar-actions" id="js-tour-actions">
           <SaveStatus />
           {current && (
             <button
@@ -190,6 +192,7 @@ function App() {
             </button>
           )}
           <button
+            id="js-tour-view-mode"
             type="button"
             className="toolbar-btn"
             aria-label={view_mode === 'split' ? 'プレビューのみ表示' : 'エディタを表示'}
@@ -200,6 +203,7 @@ function App() {
             {view_mode === 'split' ? '👁' : '◧'}
           </button>
           <button
+            id="js-tour-settings"
             type="button"
             className="toolbar-btn"
             aria-label="設定"
@@ -209,11 +213,12 @@ function App() {
             ⚙
           </button>
           <button
+            id="js-tour-help"
             type="button"
             className="toolbar-btn"
             aria-label="ヘルプ"
-            title="ヘルプ"
-            onClick={() => set_help_open(true)}
+            title="チュートリアルを再生"
+            onClick={() => set_tour_active(true)}
           >
             ?
           </button>
@@ -265,7 +270,7 @@ function App() {
       </div>
 
       <SettingsDialog open={settings_open} on_close={() => set_settings_open(false)} />
-      <HelpDialog open={help_open} on_close={() => set_help_open(false)} />
+      <TutorialTour active={tour_active} on_close={close_tour} />
     </div>
   )
 }
