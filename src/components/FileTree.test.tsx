@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '../store/workspaceStore'
 import type { TreeNode } from '../lib/storage/types'
 
 const initial_open_file = useWorkspaceStore.getState().open_file
+const initial_toggle_done = useWorkspaceStore.getState().toggle_done
 
 const tree: TreeNode[] = [
   {
@@ -17,7 +18,11 @@ const tree: TreeNode[] = [
 
 describe('FileTree', () => {
   beforeEach(() => {
-    useWorkspaceStore.setState({ open_file: initial_open_file, current: null })
+    useWorkspaceStore.setState({
+      open_file: initial_open_file,
+      toggle_done: initial_toggle_done,
+      current: null,
+    })
   })
 
   it('空のときは案内を表示する', () => {
@@ -44,5 +49,25 @@ describe('FileTree', () => {
     expect(screen.getByText('b.md')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /docs/ }))
     expect(screen.queryByText('b.md')).toBeNull()
+  })
+
+  it('各ファイル行に済ボタンを表示する', () => {
+    render(<FileTree workspace_id="ws-1" nodes={tree} />)
+    expect(screen.getByRole('button', { name: 'a.md を処理済みにする' })).toBeInTheDocument()
+  })
+
+  it('済ボタンのクリックで対象の workspace_id と path を渡して toggle_done を呼ぶ', () => {
+    const toggle_done = vi.fn(async () => {})
+    useWorkspaceStore.setState({ toggle_done })
+    render(<FileTree workspace_id="ws-9" nodes={tree} />)
+    fireEvent.click(screen.getByRole('button', { name: 'a.md を処理済みにする' }))
+    expect(toggle_done).toHaveBeenCalledWith({ workspace_id: 'ws-9', path: 'a.md' })
+  })
+
+  it('【済】ファイルは解除ボタン（aria-pressed=true）として表示する', () => {
+    const done_tree: TreeNode[] = [{ kind: 'file', name: '【済】a.md', path: '【済】a.md' }]
+    render(<FileTree workspace_id="ws-1" nodes={done_tree} />)
+    const done_btn = screen.getByRole('button', { name: '【済】a.md の処理済みを解除' })
+    expect(done_btn).toHaveAttribute('aria-pressed', 'true')
   })
 })

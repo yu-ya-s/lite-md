@@ -318,6 +318,48 @@ body {
   color: #ffffff;
 }
 
+/* ファイル選択と済化を同じ行で完結させるため、ファイル名と済ボタンを横並びにする */
+.tree__item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tree__item .tree__file {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tree__done {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+/* 済のファイルは状態が一目で分かるよう常時表示、未処理はホバー/選択/フォーカス時のみ表示する */
+.tree__item:hover .tree__done,
+.tree__item:has(.tree__file--active) .tree__done,
+.tree__done:focus-visible,
+.tree__done--active {
+  opacity: 1;
+}
+
+.tree__done:hover {
+  background-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.tree__done--active {
+  color: var(--color-accent);
+}
+
 .tree__caret {
   display: inline-block;
   width: 1em;

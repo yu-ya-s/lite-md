@@ -224,6 +224,20 @@ describe('workspaceStore', () => {
     expect(state.workspaces[0].tree.some((n) => n.name === 'a.md')).toBe(true)
   })
 
+  it('toggle_done に他ファイルを指定すると current は変えずにそのファイルだけ済化する', async () => {
+    set_picker(create_mock_directory('notes', { 'a.md': '# A', 'b.md': '# B' }))
+    await useWorkspaceStore.getState().add_folder()
+    const id = useWorkspaceStore.getState().workspaces[0].id
+    await useWorkspaceStore.getState().open_file(id, 'a.md')
+
+    await useWorkspaceStore.getState().toggle_done({ workspace_id: id, path: 'b.md' })
+    const state = useWorkspaceStore.getState()
+    // 開いているファイルは a.md のまま、指定した b.md だけが【済】になる
+    expect(state.current?.path).toBe('a.md')
+    expect(state.workspaces[0].tree.some((n) => n.name === '【済】b.md')).toBe(true)
+    expect(state.workspaces[0].tree.some((n) => n.name === 'a.md')).toBe(true)
+  })
+
   it('toggle_done はファイル未選択なら何もしない', async () => {
     useWorkspaceStore.setState({ current: null })
     await useWorkspaceStore.getState().toggle_done()

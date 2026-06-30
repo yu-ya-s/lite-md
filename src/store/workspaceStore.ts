@@ -67,7 +67,7 @@ type WorkspaceState = {
   set_content: (content: string) => void
   open_text: (content: string) => void
   save: () => Promise<void>
-  toggle_done: () => Promise<void>
+  toggle_done: (target?: { workspace_id: string; path: string }) => Promise<void>
   reload_current: () => Promise<void>
   check_external_change: () => Promise<void>
   close_folder: (workspace_id: string) => Promise<void>
@@ -234,32 +234,39 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
 
-  toggle_done: async () => {
+  toggle_done: async (target) => {
     const { workspaces, current } = get()
-    if (!current) return
-    const ws = workspaces.find((w) => w.id === current.workspace_id)
+    // 引数省略時は現在開いているファイルを対象にする（ツールバーの済ボタンとの互換）
+    const ref = target ?? current
+    if (!ref) return
+    const ws = workspaces.find((w) => w.id === ref.workspace_id)
     if (!ws) return
 
-    const name = current.path.split('/').pop() ?? ''
+    const name = ref.path.split('/').pop() ?? ''
     const next_name = name.startsWith(DONE_PREFIX)
       ? name.slice(DONE_PREFIX.length)
       : `${DONE_PREFIX}${name}`
 
     try {
-      const new_path = await ws.workspace.rename_file(current.path, next_name)
+      const new_path = await ws.workspace.rename_file(ref.path, next_name)
       const tree = await ws.workspace.build_tree()
-      let mtime = get().current_mtime
-      try {
-        mtime = await ws.workspace.last_modified(new_path)
-      } catch {
-        // 取得失敗は無視
-      }
+      const is_current = current?.workspace_id === ref.workspace_id && current.path === ref.path
+
       set({
         workspaces: get().workspaces.map((w) => (w.id === ws.id ? { ...w, tree } : w)),
-        current: { workspace_id: ws.id, path: new_path },
-        current_mtime: mtime,
         error: null,
       })
+
+      // 済化したのが開いているファイルのときだけ current と更新時刻を追従させる
+      if (is_current) {
+        let mtime = get().current_mtime
+        try {
+          mtime = await ws.workspace.last_modified(new_path)
+        } catch {
+          // 取得失敗は無視
+        }
+        set({ current: { workspace_id: ws.id, path: new_path }, current_mtime: mtime })
+      }
     } catch {
       set({ error: 'ファイル名の変更に失敗しました' })
     }
