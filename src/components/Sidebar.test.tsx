@@ -50,8 +50,29 @@ describe('Sidebar', () => {
     render(<Sidebar />)
     expect(screen.getByText('📁 notes')).toBeInTheDocument()
     expect(screen.getByText('📁 docs')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('button', { name: 'docs を展開する' }))
     expect(screen.getByRole('button', { name: 'a.md' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'b.md' })).toBeInTheDocument()
+  })
+
+  it('フォルダはデフォルトで折りたたまれており、キャレットクリックで開閉できる', () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [{ kind: 'file', name: 'a.md', path: 'a.md' }]),
+      ],
+    })
+    render(<Sidebar />)
+    expect(screen.queryByRole('button', { name: 'a.md' })).toBeNull()
+
+    const caret = screen.getByRole('button', { name: 'notes を展開する' })
+    fireEvent.click(caret)
+    expect(screen.getByRole('button', { name: 'a.md' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'notes を折りたたむ' }))
+    expect(screen.queryByRole('button', { name: 'a.md' })).toBeNull()
   })
 
   it('ラベルが設定されていればフォルダ名の代わりに表示する', () => {
@@ -137,6 +158,7 @@ describe('Sidebar', () => {
       ],
     })
     render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
     expect(screen.getByRole('button', { name: '【済】b.md' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: '【済】を隠す' }))

@@ -50,6 +50,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const [editing_id, set_editing_id] = useState<string | null>(null)
   const [draft, set_draft] = useState('')
   const [hide_done, set_hide_done] = useState(() => localStorage.getItem(HIDE_DONE_KEY) === '1')
+  const [expanded_ids, set_expanded_ids] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     localStorage.setItem(HIDE_DONE_KEY, hide_done ? '1' : '0')
@@ -78,6 +79,15 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       cancel_rename.current = true
       event.currentTarget.blur()
     }
+  }
+
+  const toggle_expanded = (id: string) => {
+    set_expanded_ids((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   return (
@@ -124,9 +134,20 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
             workspaces.map((ws) => {
               const display_name = ws.label || ws.name
               const nodes = hide_done ? filter_out_prefixed(ws.tree, DONE_PREFIX) : ws.tree
+              const is_expanded = expanded_ids.has(ws.id)
               return (
                 <div key={ws.id} className="workspace">
                   <div className="sidebar__folder">
+                    <button
+                      type="button"
+                      className="sidebar__caret"
+                      aria-expanded={is_expanded}
+                      aria-label={`${display_name} を${is_expanded ? '折りたたむ' : '展開する'}`}
+                      title={is_expanded ? '折りたたむ' : '展開する'}
+                      onClick={() => toggle_expanded(ws.id)}
+                    >
+                      {is_expanded ? '▾' : '▸'}
+                    </button>
                     {editing_id === ws.id ? (
                       <input
                         className="sidebar__rename"
@@ -172,7 +193,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                       </button>
                     </span>
                   </div>
-                  <FileTree workspace_id={ws.id} nodes={nodes} />
+                  {is_expanded && <FileTree workspace_id={ws.id} nodes={nodes} />}
                 </div>
               )
             })

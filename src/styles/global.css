@@ -251,6 +251,22 @@ body {
   color: var(--color-text);
 }
 
+.sidebar__caret {
+  flex: 0 0 auto;
+  width: 1.4em;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: center;
+  padding: 2px 0;
+}
+
+.sidebar__caret:hover {
+  color: var(--color-text);
+}
+
 .sidebar__rename {
   flex: 1 1 auto;
   min-width: 0;
