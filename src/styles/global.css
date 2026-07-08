@@ -220,13 +220,15 @@ body {
 .sidebar__folder {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 4px;
   margin: 4px 0 6px;
   font-size: 13px;
   font-weight: 600;
 }
 
 .sidebar__folder-name {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
