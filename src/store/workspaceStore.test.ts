@@ -60,11 +60,37 @@ describe('workspaceStore', () => {
     expect(workspaces.map((w) => w.name)).toEqual(['notes', 'docs'])
   })
 
-  it('ダイアログをキャンセルしてもエラーにしない', async () => {
+  it('ダイアログをキャンセルしてもエラーにせず読み込み中にもしない', async () => {
     set_picker(null)
     await useWorkspaceStore.getState().add_folder()
     expect(useWorkspaceStore.getState().error).toBeNull()
     expect(useWorkspaceStore.getState().workspaces).toHaveLength(0)
+    expect(useWorkspaceStore.getState().is_loading).toBe(false)
+  })
+
+  it('add_folder はフォルダ走査中だけ is_loading を立てる', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    // 走査を途中で止められるハンドル。読み込み中の状態を観測するために使う
+    const inner = create_mock_directory('slow', { 'a.md': '# A' })
+    set_picker({
+      name: 'slow',
+      kind: 'directory',
+      async *entries() {
+        await gate
+        yield* inner.entries()
+      },
+    } as unknown as FileSystemDirectoryHandle)
+
+    const pending = useWorkspaceStore.getState().add_folder()
+    await vi.waitFor(() => expect(useWorkspaceStore.getState().is_loading).toBe(true))
+
+    release()
+    await pending
+    expect(useWorkspaceStore.getState().is_loading).toBe(false)
+    expect(useWorkspaceStore.getState().workspaces).toHaveLength(1)
   })
 
   it('open_file で内容を読み込み save_status=saved になる', async () => {

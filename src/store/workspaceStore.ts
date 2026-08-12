@@ -56,6 +56,8 @@ type WorkspaceState = {
   external_changed: boolean
   save_status: SaveStatus
   can_restore: boolean
+  // フォルダの走査中（ツリー構築中）を表す。大きいフォルダでは数十秒かかるため画面に出す
+  is_loading: boolean
   error: string | null
 
   init: () => Promise<void>
@@ -86,6 +88,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   external_changed: false,
   save_status: 'idle',
   can_restore: false,
+  is_loading: false,
   error: null,
 
   init: async () => {
@@ -96,6 +99,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const folders = await load_folders()
       if (folders.length === 0) return
 
+      set({ is_loading: true })
       const loaded: LoadedWorkspace[] = []
       let any_denied = false
       for (const folder of folders) {
@@ -108,19 +112,32 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({ workspaces: loaded, can_restore: any_denied })
     } catch {
       // 復元に失敗しても致命的ではない（手動で開けばよい）ので黙って無視する
+    } finally {
+      set({ is_loading: false })
     }
   },
 
   add_folder: async () => {
+    let handle: FileSystemDirectoryHandle
     try {
-      const handle = await window.showDirectoryPicker({ id: 'lite-md', mode: 'readwrite' })
+      handle = await window.showDirectoryPicker({ id: 'lite-md', mode: 'readwrite' })
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      set({ error: 'フォルダを開けませんでした' })
+      return
+    }
+
+    // 選択後の走査は時間がかかるため、ここから読み込み中を表示する
+    set({ is_loading: true })
+    try {
       const loaded = await build_loaded(handle)
       const workspaces = [...get().workspaces, loaded]
       set({ workspaces, error: null })
       await save_folders(to_persisted(workspaces))
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return
+    } catch {
       set({ error: 'フォルダを開けませんでした' })
+    } finally {
+      set({ is_loading: false })
     }
   },
 
@@ -132,6 +149,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return
       }
 
+      set({ is_loading: true })
       const loaded: LoadedWorkspace[] = []
       for (const folder of folders) {
         if ((await folder.handle.requestPermission({ mode: 'readwrite' })) === 'granted') {
@@ -146,6 +164,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({ workspaces: loaded, can_restore: false, error: null, current: null })
     } catch {
       set({ error: 'フォルダを復元できませんでした' })
+    } finally {
+      set({ is_loading: false })
     }
   },
 
@@ -154,6 +174,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!ws) return
     // ハンドルは保持済みなので、ページを再読み込みせずツリーだけ再走査する
     // （裏で生成されたファイルなどを反映するため）
+    set({ is_loading: true })
     try {
       const tree = await ws.workspace.build_tree()
       set({
@@ -162,6 +183,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       })
     } catch {
       set({ error: 'フォルダの再読み込みに失敗しました' })
+    } finally {
+      set({ is_loading: false })
     }
   },
 

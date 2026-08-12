@@ -33,6 +33,14 @@ describe('Sidebar', () => {
     expect(add_folder).toHaveBeenCalled()
   })
 
+  it('読み込み中は案内を出し、フォルダ未選択の表示と追加ボタンを抑える', () => {
+    useWorkspaceStore.setState({ is_supported: true, is_loading: true })
+    render(<Sidebar />)
+    expect(screen.getByText('フォルダを読み込み中…')).toBeInTheDocument()
+    expect(screen.queryByText('フォルダ未選択')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'フォルダを追加' })).toBeDisabled()
+  })
+
   it('can_restore が true なら復元ボタンを表示する', () => {
     useWorkspaceStore.setState({ is_supported: true, can_restore: true })
     render(<Sidebar />)

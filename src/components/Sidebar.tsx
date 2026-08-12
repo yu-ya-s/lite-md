@@ -40,6 +40,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const is_supported = useWorkspaceStore((s) => s.is_supported)
   const workspaces = useWorkspaceStore((s) => s.workspaces)
   const can_restore = useWorkspaceStore((s) => s.can_restore)
+  const is_loading = useWorkspaceStore((s) => s.is_loading)
   const error = useWorkspaceStore((s) => s.error)
   const add_folder = useWorkspaceStore((s) => s.add_folder)
   const restore_folders = useWorkspaceStore((s) => s.restore_folders)
@@ -102,6 +103,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
               id="js-tour-open-folder"
               type="button"
               className="btn"
+              disabled={is_loading}
               onClick={() => void add_folder()}
             >
               フォルダを追加
@@ -110,12 +112,19 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
               <button
                 type="button"
                 className="btn btn--subtle"
+                disabled={is_loading}
                 onClick={() => void restore_folders()}
               >
                 前回のフォルダを開く
               </button>
             )}
           </div>
+
+          {is_loading && (
+            <p className="app__placeholder" role="status">
+              フォルダを読み込み中…
+            </p>
+          )}
 
           {error && <p className="sidebar__error">{error}</p>}
 
@@ -198,7 +207,8 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
               )
             })
           ) : (
-            <p className="app__placeholder">フォルダ未選択</p>
+            // 読み込み中は「読み込み中」の表示に任せ、未選択の案内は出さない
+            !is_loading && <p className="app__placeholder">フォルダ未選択</p>
           )}
         </>
       ) : (
