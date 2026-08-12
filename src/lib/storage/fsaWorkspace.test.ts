@@ -22,6 +22,21 @@ describe('FsaWorkspace', () => {
     }
   })
 
+  it('node_modules とドット始まりのディレクトリは走査しない', async () => {
+    const root = create_mock_directory('root', {
+      'a.md': '# A',
+      node_modules: { 'readme.md': '# dep' },
+      '.git': { 'note.md': '# hidden' },
+      docs: { 'b.md': '# B' },
+    })
+    const ws = new FsaWorkspace(root)
+    const tree = await ws.build_tree()
+
+    expect(tree.map((n) => n.name)).toEqual(['docs', 'a.md'])
+    await expect(ws.read_file('node_modules/readme.md')).rejects.toThrow()
+    await expect(ws.read_file('.git/note.md')).rejects.toThrow()
+  })
+
   it('ファイルを読み込める', async () => {
     const root = create_mock_directory('root', { 'a.md': '# Hello' })
     const ws = new FsaWorkspace(root)

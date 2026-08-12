@@ -2,6 +2,16 @@ import type { TreeNode, WorkspaceStorage } from './types'
 
 const MARKDOWN_PATTERN = /\.(md|markdown)$/i
 
+// 走査から除外するディレクトリ。編集対象の Markdown は基本ここに入らない一方、
+// 含めるとリポジトリのルートを開いたときに数万エントリの再帰走査になり、
+// フォルダ追加が数分間無反応になってしまうため除外する
+const SKIPPED_DIRECTORIES = new Set(['node_modules'])
+
+// .git や .venv などドット始まりのディレクトリも同じ理由で除外する
+function is_skipped_directory(name: string): boolean {
+  return name.startsWith('.') || SKIPPED_DIRECTORIES.has(name)
+}
+
 /**
  * File System Access API の FileSystemDirectoryHandle を WorkspaceStorage として扱う実装。
  * ツリー構築時に各ファイルのハンドルを path をキーにキャッシュし、読み書きに使う。
@@ -29,6 +39,7 @@ export class FsaWorkspace implements WorkspaceStorage {
     for await (const [name, handle] of dir.entries()) {
       const path = base_path ? `${base_path}/${name}` : name
       if (handle.kind === 'directory') {
+        if (is_skipped_directory(name)) continue
         const children = await this.walk(handle, path)
         // Markdownを1つも含まないディレクトリはツリーに出さない
         if (children.length > 0) {
