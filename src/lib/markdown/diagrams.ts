@@ -35,6 +35,9 @@ async function load_mermaid() {
         startOnLoad: false,
         securityLevel: 'strict',
         theme: is_dark ? 'dark' : 'default',
+        // DOMPurify が foreignObject を削るため、ラベルは SVG テキストで描かせる
+        htmlLabels: false,
+        flowchart: { htmlLabels: false },
       })
       return mermaid
     })
