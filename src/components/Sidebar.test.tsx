@@ -192,4 +192,81 @@ describe('Sidebar', () => {
     fireEvent.change(input, { target: { files: [file] } })
     await waitFor(() => expect(open_text).toHaveBeenCalledWith('# hi'))
   })
+
+  it('全選択チェックボックスで未済ファイルをすべて選択し「N件選択中」を表示する', () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'a.md', path: 'a.md' },
+          { kind: 'file', name: 'b.md', path: 'b.md' },
+          { kind: 'file', name: '【済】c.md', path: '【済】c.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+
+    const select_all = screen.getByRole('checkbox', { name: 'notes のファイルをすべて選択' })
+    fireEvent.click(select_all)
+
+    expect(screen.getByText('2件選択中')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'a.md を選択' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'b.md を選択' })).toBeChecked()
+  })
+
+  it('「済にする」で選択したパスを渡して mark_done を呼ぶ', () => {
+    const mark_done = vi.fn(async () => {})
+    useWorkspaceStore.setState({
+      is_supported: true,
+      mark_done,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [{ kind: 'file', name: 'a.md', path: 'a.md' }]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'a.md を選択' }))
+    fireEvent.click(screen.getByRole('button', { name: 'notes の選択したファイルを済にする' }))
+    expect(mark_done).toHaveBeenCalledWith([{ workspace_id: 'ws-1', path: 'a.md' }])
+  })
+
+  it('hide_done 中は非表示の【済】ファイルを全選択の対象に含めない', () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'a.md', path: 'a.md' },
+          { kind: 'file', name: '【済】b.md', path: '【済】b.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('button', { name: '【済】を隠す' }))
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'notes のファイルをすべて選択' }))
+    expect(screen.getByText('1件選択中')).toBeInTheDocument()
+  })
+
+  it('一部だけ選択すると全選択チェックボックスが indeterminate になる', () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'a.md', path: 'a.md' },
+          { kind: 'file', name: 'b.md', path: 'b.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'a.md を選択' }))
+
+    const select_all = screen.getByRole('checkbox', {
+      name: 'notes のファイルをすべて選択',
+    }) as HTMLInputElement
+    expect(select_all.indeterminate).toBe(true)
+    expect(select_all.checked).toBe(false)
+  })
 })

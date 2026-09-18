@@ -275,6 +275,29 @@ body {
   color: var(--color-text);
 }
 
+.sidebar__select-all {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.sidebar__bulk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.sidebar__bulk .btn {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
 .sidebar__rename {
   flex: 1 1 auto;
   min-width: 0;
@@ -342,11 +365,24 @@ body {
   color: #ffffff;
 }
 
-/* ファイル選択と済化を同じ行で完結させるため、ファイル名と済ボタンを横並びにする */
+/* ファイル選択と済化を同じ行で完結させるため、チェックボックス・ファイル名・済ボタンを横並びにする */
 .tree__item {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.tree__check {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* 済ファイルは選択対象外だが、他行とチェックボックスの位置を揃えるため空要素で幅を確保する */
+.tree__check--placeholder {
+  visibility: hidden;
 }
 
 .tree__item .tree__file {

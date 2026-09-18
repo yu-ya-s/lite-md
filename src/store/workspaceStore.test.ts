@@ -270,6 +270,72 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().current).toBeNull()
   })
 
+  it('mark_done は未済のみ【済】を付け、既に済のものはスキップし、build_tree はワークスペースごとに1回呼ぶ', async () => {
+    set_picker(
+      create_mock_directory('notes', { 'a.md': '# A', 'b.md': '# B', '【済】c.md': '# C' }),
+    )
+    await useWorkspaceStore.getState().add_folder()
+    const ws = useWorkspaceStore.getState().workspaces[0]
+    const build_tree_spy = vi.spyOn(ws.workspace, 'build_tree')
+
+    await useWorkspaceStore.getState().mark_done([
+      { workspace_id: ws.id, path: 'a.md' },
+      { workspace_id: ws.id, path: 'b.md' },
+      { workspace_id: ws.id, path: '【済】c.md' },
+    ])
+
+    const names = useWorkspaceStore
+      .getState()
+      .workspaces[0].tree.map((n) => n.name)
+      .sort()
+    expect(names).toEqual(['【済】a.md', '【済】b.md', '【済】c.md'])
+    expect(build_tree_spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('mark_done で対象に開いているファイルが含まれていれば current.path を新パスに追従させる', async () => {
+    set_picker(create_mock_directory('notes', { 'a.md': '# A' }))
+    await useWorkspaceStore.getState().add_folder()
+    const id = useWorkspaceStore.getState().workspaces[0].id
+    await useWorkspaceStore.getState().open_file(id, 'a.md')
+
+    await useWorkspaceStore.getState().mark_done([{ workspace_id: id, path: 'a.md' }])
+    expect(useWorkspaceStore.getState().current?.path).toBe('【済】a.md')
+  })
+
+  it('mark_done は1件失敗しても他は反映され、error に失敗件数が入る', async () => {
+    const rename_file = vi.fn(async (path: string, new_name: string) => {
+      if (path === 'a.md') throw new Error('fail')
+      return new_name
+    })
+    const build_tree = vi.fn(async () => [
+      { kind: 'file' as const, name: '【済】b.md', path: '【済】b.md' },
+    ])
+    useWorkspaceStore.setState({
+      workspaces: [
+        {
+          id: 'ws-x',
+          name: 'x',
+          label: '',
+          handle: {} as never,
+          workspace: { rename_file, build_tree } as never,
+          tree: [
+            { kind: 'file', name: 'a.md', path: 'a.md' },
+            { kind: 'file', name: 'b.md', path: 'b.md' },
+          ],
+        },
+      ],
+    })
+
+    await useWorkspaceStore.getState().mark_done([
+      { workspace_id: 'ws-x', path: 'a.md' },
+      { workspace_id: 'ws-x', path: 'b.md' },
+    ])
+
+    const state = useWorkspaceStore.getState()
+    expect(state.error).toBe('ファイル名の変更に失敗しました（1件）')
+    expect(state.workspaces[0].tree.some((n) => n.name === '【済】b.md')).toBe(true)
+  })
+
   it('reload_folder でツリーを再走査して新規ファイルを反映する', async () => {
     let calls = 0
     const ws_obj = {

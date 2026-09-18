@@ -1,4 +1,4 @@
-import { filter_out_prefixed } from './tree'
+import { collect_files, filter_out_prefixed } from './tree'
 import type { TreeNode } from './storage/types'
 
 const PREFIX = '【済】'
@@ -39,5 +39,32 @@ describe('filter_out_prefixed', () => {
   it('該当が無ければそのまま返す', () => {
     const nodes: TreeNode[] = [{ kind: 'file', name: 'a.md', path: 'a.md' }]
     expect(filter_out_prefixed(nodes, PREFIX)).toHaveLength(1)
+  })
+})
+
+describe('collect_files', () => {
+  it('ネストしたディレクトリの中のファイルも平坦に返す', () => {
+    const nodes: TreeNode[] = [
+      { kind: 'file', name: 'a.md', path: 'a.md' },
+      {
+        kind: 'directory',
+        name: 'docs',
+        path: 'docs',
+        children: [
+          { kind: 'file', name: 'b.md', path: 'docs/b.md' },
+          {
+            kind: 'directory',
+            name: 'nested',
+            path: 'docs/nested',
+            children: [{ kind: 'file', name: 'c.md', path: 'docs/nested/c.md' }],
+          },
+        ],
+      },
+    ]
+    expect(collect_files(nodes).map((f) => f.path)).toEqual(['a.md', 'docs/b.md', 'docs/nested/c.md'])
+  })
+
+  it('ファイルが無ければ空配列を返す', () => {
+    expect(collect_files([])).toEqual([])
   })
 })

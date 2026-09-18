@@ -70,4 +70,25 @@ describe('FileTree', () => {
     const done_btn = screen.getByRole('button', { name: '【済】a.md の処理済みを解除' })
     expect(done_btn).toHaveAttribute('aria-pressed', 'true')
   })
+
+  it('未済ファイルにはチェックボックスが出て、クリックで path を渡して on_toggle_select を呼ぶ', () => {
+    const on_toggle_select = vi.fn()
+    render(
+      <FileTree
+        workspace_id="ws-1"
+        nodes={tree}
+        selected={new Set()}
+        on_toggle_select={on_toggle_select}
+      />,
+    )
+    const checkbox = screen.getByRole('checkbox', { name: 'a.md を選択' })
+    fireEvent.click(checkbox)
+    expect(on_toggle_select).toHaveBeenCalledWith('a.md')
+  })
+
+  it('【済】ファイルにはチェックボックスを表示しない', () => {
+    const done_tree: TreeNode[] = [{ kind: 'file', name: '【済】a.md', path: '【済】a.md' }]
+    render(<FileTree workspace_id="ws-1" nodes={done_tree} />)
+    expect(screen.queryByRole('checkbox', { name: '【済】a.md を選択' })).toBeNull()
+  })
 })

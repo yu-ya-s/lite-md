@@ -2,7 +2,23 @@ import { useState } from 'react'
 import { DONE_PREFIX, useWorkspaceStore } from '../store/workspaceStore'
 import type { DirectoryNode, FileNode, TreeNode } from '../lib/storage/types'
 
-function FileItem({ workspace_id, node }: { workspace_id: string; node: FileNode }) {
+const EMPTY_SELECTION = new Set<string>()
+
+function noop_toggle_select() {
+  // selected/on_toggle_select 未指定時（旧呼び出し互換）のダミー
+}
+
+type SelectionProps = {
+  selected?: Set<string>
+  on_toggle_select?: (path: string) => void
+}
+
+function FileItem({
+  workspace_id,
+  node,
+  selected = EMPTY_SELECTION,
+  on_toggle_select = noop_toggle_select,
+}: { workspace_id: string; node: FileNode } & SelectionProps) {
   const open_file = useWorkspaceStore((s) => s.open_file)
   const toggle_done = useWorkspaceStore((s) => s.toggle_done)
   const current = useWorkspaceStore((s) => s.current)
@@ -11,6 +27,17 @@ function FileItem({ workspace_id, node }: { workspace_id: string; node: FileNode
 
   return (
     <li className="tree__item">
+      {is_done ? (
+        <span className="tree__check tree__check--placeholder" aria-hidden="true" />
+      ) : (
+        <input
+          type="checkbox"
+          className="tree__check"
+          aria-label={`${node.name} を選択`}
+          checked={selected.has(node.path)}
+          onChange={() => on_toggle_select(node.path)}
+        />
+      )}
       <button
         type="button"
         className={`tree__file${is_active ? ' tree__file--active' : ''}`}
@@ -33,7 +60,12 @@ function FileItem({ workspace_id, node }: { workspace_id: string; node: FileNode
   )
 }
 
-function DirItem({ workspace_id, node }: { workspace_id: string; node: DirectoryNode }) {
+function DirItem({
+  workspace_id,
+  node,
+  selected,
+  on_toggle_select,
+}: { workspace_id: string; node: DirectoryNode } & SelectionProps) {
   const [open, set_open] = useState(true)
 
   return (
@@ -47,28 +79,64 @@ function DirItem({ workspace_id, node }: { workspace_id: string; node: Directory
       >
         <span className="tree__caret">{open ? '▾' : '▸'}</span> {node.name}
       </button>
-      {open && <TreeList workspace_id={workspace_id} nodes={node.children} />}
+      {open && (
+        <TreeList
+          workspace_id={workspace_id}
+          nodes={node.children}
+          selected={selected}
+          on_toggle_select={on_toggle_select}
+        />
+      )}
     </li>
   )
 }
 
-function TreeList({ workspace_id, nodes }: { workspace_id: string; nodes: TreeNode[] }) {
+function TreeList({
+  workspace_id,
+  nodes,
+  selected,
+  on_toggle_select,
+}: { workspace_id: string; nodes: TreeNode[] } & SelectionProps) {
   return (
     <ul className="tree__list">
       {nodes.map((node) =>
         node.kind === 'directory' ? (
-          <DirItem key={node.path} workspace_id={workspace_id} node={node} />
+          <DirItem
+            key={node.path}
+            workspace_id={workspace_id}
+            node={node}
+            selected={selected}
+            on_toggle_select={on_toggle_select}
+          />
         ) : (
-          <FileItem key={node.path} workspace_id={workspace_id} node={node} />
+          <FileItem
+            key={node.path}
+            workspace_id={workspace_id}
+            node={node}
+            selected={selected}
+            on_toggle_select={on_toggle_select}
+          />
         ),
       )}
     </ul>
   )
 }
 
-export function FileTree({ workspace_id, nodes }: { workspace_id: string; nodes: TreeNode[] }) {
+export function FileTree({
+  workspace_id,
+  nodes,
+  selected,
+  on_toggle_select,
+}: { workspace_id: string; nodes: TreeNode[] } & SelectionProps) {
   if (nodes.length === 0) {
     return <p className="app__placeholder">Markdownファイルがありません</p>
   }
-  return <TreeList workspace_id={workspace_id} nodes={nodes} />
+  return (
+    <TreeList
+      workspace_id={workspace_id}
+      nodes={nodes}
+      selected={selected}
+      on_toggle_select={on_toggle_select}
+    />
+  )
 }

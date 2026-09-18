@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { DONE_PREFIX, useWorkspaceStore } from '../store/workspaceStore'
-import { filter_out_prefixed } from '../lib/tree'
+import { collect_files, filter_out_prefixed } from '../lib/tree'
 import { FileTree } from './FileTree'
 
 const HIDE_DONE_KEY = 'lite-md:hide-done'
+const EMPTY_SELECTION = new Set<string>()
 
 function FallbackOpen() {
   const open_text = useWorkspaceStore((s) => s.open_text)
@@ -47,15 +48,42 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const reload_folder = useWorkspaceStore((s) => s.reload_folder)
   const rename_workspace = useWorkspaceStore((s) => s.rename_workspace)
   const close_folder = useWorkspaceStore((s) => s.close_folder)
+  const mark_done = useWorkspaceStore((s) => s.mark_done)
 
   const [editing_id, set_editing_id] = useState<string | null>(null)
   const [draft, set_draft] = useState('')
   const [hide_done, set_hide_done] = useState(() => localStorage.getItem(HIDE_DONE_KEY) === '1')
   const [expanded_ids, set_expanded_ids] = useState<Set<string>>(new Set())
+  // ワークスペースIDごとの選択中ファイルパス（一括「済にする」の対象）
+  const [selected_paths, set_selected_paths] = useState<Record<string, Set<string>>>({})
+  // 「済にする」実行中のワークスペースID（連打防止のためボタンを disabled にする）
+  const [marking_ids, set_marking_ids] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     localStorage.setItem(HIDE_DONE_KEY, hide_done ? '1' : '0')
   }, [hide_done])
+
+  // フォルダの再読み込み・閉じる・済化などでツリーが変わったら、
+  // 存在しなくなったパスの選択を落とす
+  useEffect(() => {
+    set_selected_paths((prev) => {
+      if (Object.keys(prev).length === 0) return prev
+      let changed = false
+      const next: Record<string, Set<string>> = {}
+      for (const [ws_id, paths] of Object.entries(prev)) {
+        const ws = workspaces.find((w) => w.id === ws_id)
+        if (!ws) {
+          changed = true
+          continue
+        }
+        const valid_paths = new Set(collect_files(ws.tree).map((f) => f.path))
+        const filtered = new Set([...paths].filter((p) => valid_paths.has(p)))
+        if (filtered.size !== paths.size) changed = true
+        if (filtered.size > 0) next[ws_id] = filtered
+      }
+      return changed ? next : prev
+    })
+  }, [workspaces])
   // Escape による取り消しが blur 経由で誤って確定されないよう、取り消し中フラグを持つ
   const cancel_rename = useRef(false)
 
@@ -89,6 +117,58 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       else next.add(id)
       return next
     })
+  }
+
+  const get_selected = (ws_id: string): Set<string> => selected_paths[ws_id] ?? EMPTY_SELECTION
+
+  const toggle_select = (ws_id: string, path: string) => {
+    set_selected_paths((prev) => {
+      const current_set = prev[ws_id] ?? new Set<string>()
+      const next_set = new Set(current_set)
+      if (next_set.has(path)) next_set.delete(path)
+      else next_set.add(path)
+      const next = { ...prev }
+      if (next_set.size > 0) next[ws_id] = next_set
+      else delete next[ws_id]
+      return next
+    })
+  }
+
+  const toggle_select_all = (ws_id: string, paths: string[]) => {
+    set_selected_paths((prev) => {
+      const current_set = prev[ws_id] ?? new Set<string>()
+      const all_selected = paths.length > 0 && paths.every((p) => current_set.has(p))
+      const next = { ...prev }
+      if (all_selected) {
+        delete next[ws_id]
+      } else {
+        next[ws_id] = new Set(paths)
+      }
+      return next
+    })
+  }
+
+  const clear_selection = (ws_id: string) => {
+    set_selected_paths((prev) => {
+      if (!prev[ws_id]) return prev
+      const next = { ...prev }
+      delete next[ws_id]
+      return next
+    })
+  }
+
+  const handle_mark_done = async (ws_id: string, paths: string[]) => {
+    set_marking_ids((prev) => new Set(prev).add(ws_id))
+    try {
+      await mark_done(paths.map((path) => ({ workspace_id: ws_id, path })))
+    } finally {
+      set_marking_ids((prev) => {
+        const next = new Set(prev)
+        next.delete(ws_id)
+        return next
+      })
+      clear_selection(ws_id)
+    }
   }
 
   return (
@@ -144,6 +224,13 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
               const display_name = ws.label || ws.name
               const nodes = hide_done ? filter_out_prefixed(ws.tree, DONE_PREFIX) : ws.tree
               const is_expanded = expanded_ids.has(ws.id)
+              const undone_paths = collect_files(nodes)
+                .filter((f) => !f.name.startsWith(DONE_PREFIX))
+                .map((f) => f.path)
+              const selected_set = get_selected(ws.id)
+              const all_selected =
+                undone_paths.length > 0 && undone_paths.every((p) => selected_set.has(p))
+              const some_selected = undone_paths.some((p) => selected_set.has(p))
               return (
                 <div key={ws.id} className="workspace">
                   <div className="sidebar__folder">
@@ -157,6 +244,17 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                     >
                       {is_expanded ? '▾' : '▸'}
                     </button>
+                    <input
+                      type="checkbox"
+                      className="sidebar__select-all"
+                      aria-label={`${display_name} のファイルをすべて選択`}
+                      disabled={undone_paths.length === 0}
+                      checked={all_selected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = !all_selected && some_selected
+                      }}
+                      onChange={() => toggle_select_all(ws.id, undone_paths)}
+                    />
                     {editing_id === ws.id ? (
                       <input
                         className="sidebar__rename"
@@ -202,7 +300,36 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                       </button>
                     </span>
                   </div>
-                  {is_expanded && <FileTree workspace_id={ws.id} nodes={nodes} />}
+                  {selected_set.size > 0 && (
+                    <div className="sidebar__bulk">
+                      <span>{selected_set.size}件選択中</span>
+                      <button
+                        type="button"
+                        className="btn sidebar__bulk-done"
+                        aria-label={`${display_name} の選択したファイルを済にする`}
+                        disabled={marking_ids.has(ws.id)}
+                        onClick={() => void handle_mark_done(ws.id, [...selected_set])}
+                      >
+                        済にする
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--subtle"
+                        disabled={marking_ids.has(ws.id)}
+                        onClick={() => clear_selection(ws.id)}
+                      >
+                        選択解除
+                      </button>
+                    </div>
+                  )}
+                  {is_expanded && (
+                    <FileTree
+                      workspace_id={ws.id}
+                      nodes={nodes}
+                      selected={selected_set}
+                      on_toggle_select={(path) => toggle_select(ws.id, path)}
+                    />
+                  )}
                 </div>
               )
             })
