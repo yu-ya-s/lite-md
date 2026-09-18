@@ -377,4 +377,92 @@ describe('Sidebar', () => {
     resolve_mark_done({ done: ['a.md', 'b.md'], failed: [] })
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
   })
+
+  it('検索窓に入力すると一致するファイルだけ表示する', async () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'apple.md', path: 'apple.md' },
+          { kind: 'file', name: 'banana.md', path: 'banana.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.change(screen.getByLabelText('ファイル名で絞り込み'), { target: { value: 'app' } })
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'banana.md' })).toBeNull())
+    expect(screen.getByRole('button', { name: 'apple.md' })).toBeInTheDocument()
+  })
+
+  it('折りたたんでいるフォルダも検索中は展開して結果を見せる', async () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [{ kind: 'file', name: 'apple.md', path: 'apple.md' }]),
+      ],
+    })
+    render(<Sidebar />)
+    expect(screen.queryByRole('button', { name: 'apple.md' })).toBeNull()
+
+    fireEvent.change(screen.getByLabelText('ファイル名で絞り込み'), { target: { value: 'app' } })
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'apple.md' })).toBeInTheDocument())
+  })
+
+  it('ヒット0件のときは「一致するファイルがありません」と表示する', async () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [{ kind: 'file', name: 'apple.md', path: 'apple.md' }]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.change(screen.getByLabelText('ファイル名で絞り込み'), {
+      target: { value: 'no-match' },
+    })
+
+    await waitFor(() => expect(screen.getByText('一致するファイルがありません')).toBeInTheDocument())
+  })
+
+  it('Escapeキーで検索窓をクリアする', async () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'apple.md', path: 'apple.md' },
+          { kind: 'file', name: 'banana.md', path: 'banana.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    const search = screen.getByLabelText('ファイル名で絞り込み')
+    fireEvent.change(search, { target: { value: 'app' } })
+    await waitFor(() => expect(search).toHaveValue('app'))
+
+    fireEvent.keyDown(search, { key: 'Escape' })
+    expect(search).toHaveValue('')
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'banana.md' })).toBeInTheDocument())
+  })
+
+  it('絞り込み中の全選択は表示中のファイルだけを対象にする', async () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'apple.md', path: 'apple.md' },
+          { kind: 'file', name: 'banana.md', path: 'banana.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.change(screen.getByLabelText('ファイル名で絞り込み'), { target: { value: 'app' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'apple.md' })).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: 'banana.md' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'notes のファイルをすべて選択' }))
+    expect(screen.getByText('1件選択中')).toBeInTheDocument()
+  })
 })

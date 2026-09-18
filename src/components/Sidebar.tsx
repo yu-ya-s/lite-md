@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { DONE_PREFIX, useWorkspaceStore } from '../store/workspaceStore'
-import { collect_files, filter_out_prefixed } from '../lib/tree'
+import { collect_files, filter_by_name, filter_out_prefixed } from '../lib/tree'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { EMPTY_SELECTION, FileTree } from './FileTree'
 
 const HIDE_DONE_KEY = 'lite-md:hide-done'
@@ -53,6 +54,9 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const [draft, set_draft] = useState('')
   const [hide_done, set_hide_done] = useState(() => localStorage.getItem(HIDE_DONE_KEY) === '1')
   const [expanded_ids, set_expanded_ids] = useState<Set<string>>(new Set())
+  const [search_query, set_search_query] = useState('')
+  const debounced_search = useDebouncedValue(search_query, 150)
+  const search_active = debounced_search.trim() !== ''
   // ワークスペースIDごとの選択中ファイルパス（一括「済にする」の対象）
   const [selected_paths, set_selected_paths] = useState<Record<string, Set<string>>>({})
   // 「済にする」実行中のワークスペースID（連打防止のためボタンを disabled にする）
@@ -110,6 +114,12 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
     } else if (event.key === 'Escape') {
       cancel_rename.current = true
       event.currentTarget.blur()
+    }
+  }
+
+  const on_search_key = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      set_search_query('')
     }
   }
 
@@ -243,11 +253,25 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
             </button>
           )}
 
+          {workspaces.length > 0 && (
+            <input
+              type="search"
+              className="sidebar__search"
+              id="js-sidebar-search"
+              placeholder="ファイル名で絞り込み"
+              aria-label="ファイル名で絞り込み"
+              value={search_query}
+              onChange={(event) => set_search_query(event.target.value)}
+              onKeyDown={on_search_key}
+            />
+          )}
+
           {workspaces.length > 0 ? (
             workspaces.map((ws) => {
               const display_name = ws.label || ws.name
-              const nodes = hide_done ? filter_out_prefixed(ws.tree, DONE_PREFIX) : ws.tree
-              const is_expanded = expanded_ids.has(ws.id)
+              const done_filtered = hide_done ? filter_out_prefixed(ws.tree, DONE_PREFIX) : ws.tree
+              const nodes = filter_by_name(done_filtered, debounced_search)
+              const is_expanded = expanded_ids.has(ws.id) || search_active
               const undone_paths = collect_files(nodes)
                 .filter((f) => !f.name.startsWith(DONE_PREFIX))
                 .map((f) => f.path)
@@ -362,6 +386,9 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                       selected={selected_set}
                       on_toggle_select={(path) => toggle_select(ws.id, path)}
                       disabled={marking_ids.has(ws.id)}
+                      empty_message={
+                        search_active ? '一致するファイルがありません' : undefined
+                      }
                     />
                   )}
                 </div>

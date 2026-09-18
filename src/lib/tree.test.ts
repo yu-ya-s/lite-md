@@ -1,4 +1,4 @@
-import { collect_files, filter_out_prefixed } from './tree'
+import { collect_files, filter_by_name, filter_out_prefixed } from './tree'
 import type { TreeNode } from './storage/types'
 
 const PREFIX = '【済】'
@@ -39,6 +39,64 @@ describe('filter_out_prefixed', () => {
   it('該当が無ければそのまま返す', () => {
     const nodes: TreeNode[] = [{ kind: 'file', name: 'a.md', path: 'a.md' }]
     expect(filter_out_prefixed(nodes, PREFIX)).toHaveLength(1)
+  })
+})
+
+describe('filter_by_name', () => {
+  it('ファイル名に部分一致するファイルだけ残す', () => {
+    const nodes: TreeNode[] = [
+      { kind: 'file', name: 'apple.md', path: 'apple.md' },
+      { kind: 'file', name: 'banana.md', path: 'banana.md' },
+    ]
+    expect(filter_by_name(nodes, 'app').map((n) => n.name)).toEqual(['apple.md'])
+  })
+
+  it('大文字小文字を無視して一致させる', () => {
+    const nodes: TreeNode[] = [{ kind: 'file', name: 'Apple.md', path: 'Apple.md' }]
+    expect(filter_by_name(nodes, 'APPLE').map((n) => n.name)).toEqual(['Apple.md'])
+  })
+
+  it('空白区切りの複数語をAND条件で一致させる', () => {
+    const nodes: TreeNode[] = [
+      { kind: 'file', name: 'apple-pie.md', path: 'apple-pie.md' },
+      { kind: 'file', name: 'apple-juice.md', path: 'apple-juice.md' },
+    ]
+    expect(filter_by_name(nodes, 'apple pie').map((n) => n.name)).toEqual(['apple-pie.md'])
+  })
+
+  it('ディレクトリ名は一致判定に使わない', () => {
+    const nodes: TreeNode[] = [
+      {
+        kind: 'directory',
+        name: 'apple',
+        path: 'apple',
+        children: [{ kind: 'file', name: 'z.md', path: 'apple/z.md' }],
+      },
+    ]
+    expect(filter_by_name(nodes, 'apple')).toEqual([])
+  })
+
+  it('フィルタ後に空になったディレクトリを取り除く', () => {
+    const nodes: TreeNode[] = [
+      {
+        kind: 'directory',
+        name: 'docs',
+        path: 'docs',
+        children: [
+          { kind: 'file', name: 'apple.md', path: 'docs/apple.md' },
+          { kind: 'file', name: 'banana.md', path: 'docs/banana.md' },
+        ],
+      },
+    ]
+    const result = filter_by_name(nodes, 'apple')
+    expect(result.map((n) => n.name)).toEqual(['docs'])
+    const docs = result[0]
+    expect(docs.kind === 'directory' && docs.children.map((c) => c.name)).toEqual(['apple.md'])
+  })
+
+  it('空のqueryならそのまま返す', () => {
+    const nodes: TreeNode[] = [{ kind: 'file', name: 'a.md', path: 'a.md' }]
+    expect(filter_by_name(nodes, '  ')).toBe(nodes)
   })
 })
 

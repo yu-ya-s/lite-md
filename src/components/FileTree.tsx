@@ -134,9 +134,10 @@ export function FileTree({
   selected,
   on_toggle_select,
   disabled,
-}: { workspace_id: string; nodes: TreeNode[] } & SelectionProps) {
+  empty_message = 'Markdownファイルがありません',
+}: { workspace_id: string; nodes: TreeNode[]; empty_message?: string } & SelectionProps) {
   if (nodes.length === 0) {
-    return <p className="app__placeholder">Markdownファイルがありません</p>
+    return <p className="app__placeholder">{empty_message}</p>
   }
   return (
     <TreeList

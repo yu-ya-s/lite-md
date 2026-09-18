@@ -354,6 +354,22 @@ body {
   font-size: 12px;
 }
 
+.sidebar__search {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.sidebar__search:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
 /* ファイルツリー */
 .tree__list {
   list-style: none;
