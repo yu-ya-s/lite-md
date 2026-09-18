@@ -216,7 +216,7 @@ describe('Sidebar', () => {
   })
 
   it('「済にする」で選択したパスを渡して mark_done を呼ぶ', () => {
-    const mark_done = vi.fn(async () => {})
+    const mark_done = vi.fn(async () => ({ done: ['a.md'], failed: [] }))
     useWorkspaceStore.setState({
       is_supported: true,
       mark_done,
@@ -268,5 +268,74 @@ describe('Sidebar', () => {
     }) as HTMLInputElement
     expect(select_all.indeterminate).toBe(true)
     expect(select_all.checked).toBe(false)
+  })
+
+  it('全選択チェックボックスと操作バーはフォルダが折りたたまれている間は表示しない', () => {
+    useWorkspaceStore.setState({
+      is_supported: true,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [{ kind: 'file', name: 'a.md', path: 'a.md' }]),
+      ],
+    })
+    render(<Sidebar />)
+    // 展開してチェックボックスで選択したあと折りたたむと、選択自体は残るがUIは隠れる
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'a.md を選択' }))
+    fireEvent.click(screen.getByRole('button', { name: 'notes を折りたたむ' }))
+
+    expect(screen.queryByRole('checkbox', { name: 'notes のファイルをすべて選択' })).toBeNull()
+    expect(screen.queryByText('1件選択中')).toBeNull()
+  })
+
+  it('「済にする」は成功した分だけ選択から外し、失敗した分は選択したまま残す', async () => {
+    const mark_done = vi.fn(async () => ({ done: ['a.md'], failed: ['b.md'] }))
+    useWorkspaceStore.setState({
+      is_supported: true,
+      mark_done,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'a.md', path: 'a.md' },
+          { kind: 'file', name: 'b.md', path: 'b.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'a.md を選択' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'b.md を選択' }))
+    fireEvent.click(screen.getByRole('button', { name: 'notes の選択したファイルを済にする' }))
+
+    await waitFor(() => expect(screen.getByText('1件選択中')).toBeInTheDocument())
+    expect(screen.getByRole('checkbox', { name: 'b.md を選択' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'a.md を選択' })).not.toBeChecked()
+  })
+
+  it('「済にする」実行中は各チェックボックスと全選択チェックボックスを disabled にする', async () => {
+    let resolve_mark_done!: (value: { done: string[]; failed: string[] }) => void
+    const mark_done = vi.fn(
+      () =>
+        new Promise<{ done: string[]; failed: string[] }>((resolve) => {
+          resolve_mark_done = resolve
+        }),
+    )
+    useWorkspaceStore.setState({
+      is_supported: true,
+      mark_done,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [{ kind: 'file', name: 'a.md', path: 'a.md' }]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'a.md を選択' }))
+    fireEvent.click(screen.getByRole('button', { name: 'notes の選択したファイルを済にする' }))
+
+    expect(screen.getByRole('checkbox', { name: 'a.md を選択' })).toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: 'notes のファイルをすべて選択' })).toBeDisabled()
+
+    resolve_mark_done({ done: ['a.md'], failed: [] })
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'a.md を選択' })).not.toBeDisabled(),
+    )
   })
 })

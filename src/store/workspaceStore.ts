@@ -44,6 +44,32 @@ function to_persisted(workspaces: LoadedWorkspace[]) {
   return workspaces.map((w) => ({ handle: w.handle, label: w.label }))
 }
 
+// path の親ディレクトリのパス（ルート直下なら空文字）
+function dir_of(path: string): string {
+  const idx = path.lastIndexOf('/')
+  return idx === -1 ? '' : path.slice(0, idx)
+}
+
+// tree から dir_path に一致するディレクトリの子要素一覧を探す（ルートは tree 自身）
+function find_dir_children(nodes: TreeNode[], dir_path: string): TreeNode[] {
+  if (dir_path === '') return nodes
+  for (const node of nodes) {
+    if (node.kind !== 'directory') continue
+    if (node.path === dir_path) return node.children
+    if (dir_path.startsWith(`${node.path}/`)) return find_dir_children(node.children, dir_path)
+  }
+  return []
+}
+
+// リネーム先と同じディレクトリに next_name のファイル/ディレクトリが既に存在するか
+// （FileSystemFileHandle.move() は同名の既存ファイルを上書きし得るため、事前に検知する）
+function name_conflicts(tree: TreeNode[], path: string, next_name: string): boolean {
+  const siblings = find_dir_children(tree, dir_of(path))
+  return siblings.some((n) => n.name === next_name)
+}
+
+type MarkDoneResult = { done: string[]; failed: string[] }
+
 type WorkspaceState = {
   is_supported: boolean
   workspaces: LoadedWorkspace[]
@@ -70,7 +96,7 @@ type WorkspaceState = {
   open_text: (content: string) => void
   save: () => Promise<void>
   toggle_done: (target?: { workspace_id: string; path: string }) => Promise<void>
-  mark_done: (targets: { workspace_id: string; path: string }[]) => Promise<void>
+  mark_done: (targets: { workspace_id: string; path: string }[]) => Promise<MarkDoneResult>
   reload_current: () => Promise<void>
   check_external_change: () => Promise<void>
   close_folder: (workspace_id: string) => Promise<void>
@@ -91,6 +117,24 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
       // 取得失敗は無視
     }
     set({ current: { workspace_id: ws.id, path: new_path }, current_mtime: mtime })
+  }
+
+  // 済化のリネーム本体（toggle_done / mark_done の共通処理）。
+  // リネーム先と同名の既存ファイルがあれば上書きせずスキップする
+  async function rename_done_target(
+    ws: LoadedWorkspace,
+    path: string,
+    next_name: string,
+  ): Promise<{ ok: true; new_path: string } | { ok: false; reason: 'conflict' | 'rename' }> {
+    if (name_conflicts(ws.tree, path, next_name)) {
+      return { ok: false, reason: 'conflict' }
+    }
+    try {
+      const new_path = await ws.workspace.rename_file(path, next_name)
+      return { ok: true, new_path }
+    } catch {
+      return { ok: false, reason: 'rename' }
+    }
   }
 
   return {
@@ -286,23 +330,31 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         : `${DONE_PREFIX}${name}`
       const is_current = current?.workspace_id === ref.workspace_id && current.path === ref.path
 
-      try {
-        const new_path = await ws.workspace.rename_file(ref.path, next_name)
-        const tree = await ws.workspace.build_tree()
+      const result = await rename_done_target(ws, ref.path, next_name)
+      if (!result.ok) {
+        set({
+          error:
+            result.reason === 'conflict'
+              ? '同名のファイルがあるため変更できませんでした'
+              : 'ファイル名の変更に失敗しました',
+        })
+        return
+      }
 
+      try {
+        const tree = await ws.workspace.build_tree()
         set({
           workspaces: get().workspaces.map((w) => (w.id === ws.id ? { ...w, tree } : w)),
           error: null,
         })
-
-        await sync_current_after_rename(ws, is_current, new_path)
+        await sync_current_after_rename(ws, is_current, result.new_path)
       } catch {
-        set({ error: 'ファイル名の変更に失敗しました' })
+        set({ error: 'ファイル一覧の更新に失敗しました' })
       }
     },
 
     mark_done: async (targets) => {
-      if (targets.length === 0) return
+      if (targets.length === 0) return { done: [], failed: [] }
       const { workspaces, current } = get()
 
       const paths_by_workspace = new Map<string, string[]>()
@@ -315,25 +367,43 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         }
       }
 
-      let fail_count = 0
+      const done: string[] = []
+      const failed: string[] = []
+      let conflict_count = 0
+      let rename_fail_count = 0
+      let build_tree_failed = false
 
       for (const [workspace_id, paths] of paths_by_workspace) {
         const ws = workspaces.find((w) => w.id === workspace_id)
-        if (!ws) continue
+        if (!ws) {
+          failed.push(...paths)
+          continue
+        }
 
+        // 開いているファイルへの current 追従は build_tree 完了後にまとめて行う
+        const pending_current: string[] = []
         let changed = false
+
         for (const path of paths) {
           const name = path.split('/').pop() ?? ''
-          // 既に済のものは対象外（付け直さない）
-          if (name.startsWith(DONE_PREFIX)) continue
+          // 既に済のものは対象外（付け直さない）。既に望む状態なので成功扱いにする
+          if (name.startsWith(DONE_PREFIX)) {
+            done.push(path)
+            continue
+          }
 
-          const is_current = current?.workspace_id === workspace_id && current.path === path
-          try {
-            const new_path = await ws.workspace.rename_file(path, `${DONE_PREFIX}${name}`)
-            changed = true
-            await sync_current_after_rename(ws, is_current, new_path)
-          } catch {
-            fail_count += 1
+          const result = await rename_done_target(ws, path, `${DONE_PREFIX}${name}`)
+          if (!result.ok) {
+            failed.push(path)
+            if (result.reason === 'conflict') conflict_count += 1
+            else rename_fail_count += 1
+            continue
+          }
+
+          changed = true
+          done.push(path)
+          if (current?.workspace_id === workspace_id && current.path === path) {
+            pending_current.push(result.new_path)
           }
         }
 
@@ -344,12 +414,28 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
               workspaces: get().workspaces.map((w) => (w.id === workspace_id ? { ...w, tree } : w)),
             })
           } catch {
-            fail_count += 1
+            build_tree_failed = true
+          }
+
+          for (const new_path of pending_current) {
+            await sync_current_after_rename(ws, true, new_path)
           }
         }
       }
 
-      set({ error: fail_count > 0 ? `ファイル名の変更に失敗しました（${fail_count}件）` : null })
+      const messages: string[] = []
+      if (conflict_count > 0) {
+        messages.push(`同名のファイルがあるため変更できませんでした（${conflict_count}件）`)
+      }
+      if (rename_fail_count > 0) {
+        messages.push(`ファイル名の変更に失敗しました（${rename_fail_count}件）`)
+      }
+      if (build_tree_failed) {
+        messages.push('ファイル一覧の更新に失敗しました')
+      }
+      set({ error: messages.length > 0 ? messages.join('、') : null })
+
+      return { done, failed }
     },
 
     reload_current: async () => {

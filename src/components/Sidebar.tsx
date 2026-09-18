@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { DONE_PREFIX, useWorkspaceStore } from '../store/workspaceStore'
 import { collect_files, filter_out_prefixed } from '../lib/tree'
-import { FileTree } from './FileTree'
+import { EMPTY_SELECTION, FileTree } from './FileTree'
 
 const HIDE_DONE_KEY = 'lite-md:hide-done'
-const EMPTY_SELECTION = new Set<string>()
 
 function FallbackOpen() {
   const open_text = useWorkspaceStore((s) => s.open_text)
@@ -160,14 +159,24 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const handle_mark_done = async (ws_id: string, paths: string[]) => {
     set_marking_ids((prev) => new Set(prev).add(ws_id))
     try {
-      await mark_done(paths.map((path) => ({ workspace_id: ws_id, path })))
+      const { done } = await mark_done(paths.map((path) => ({ workspace_id: ws_id, path })))
+      // 成功した分だけ選択から外す。失敗分は選択したまま残し、再実行できるようにする
+      set_selected_paths((prev) => {
+        const current_set = prev[ws_id]
+        if (!current_set) return prev
+        const next_set = new Set(current_set)
+        for (const path of done) next_set.delete(path)
+        const next = { ...prev }
+        if (next_set.size > 0) next[ws_id] = next_set
+        else delete next[ws_id]
+        return next
+      })
     } finally {
       set_marking_ids((prev) => {
         const next = new Set(prev)
         next.delete(ws_id)
         return next
       })
-      clear_selection(ws_id)
     }
   }
 
@@ -244,17 +253,19 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                     >
                       {is_expanded ? '▾' : '▸'}
                     </button>
-                    <input
-                      type="checkbox"
-                      className="sidebar__select-all"
-                      aria-label={`${display_name} のファイルをすべて選択`}
-                      disabled={undone_paths.length === 0}
-                      checked={all_selected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = !all_selected && some_selected
-                      }}
-                      onChange={() => toggle_select_all(ws.id, undone_paths)}
-                    />
+                    {is_expanded && (
+                      <input
+                        type="checkbox"
+                        className="sidebar__select-all"
+                        aria-label={`${display_name} のファイルをすべて選択`}
+                        disabled={undone_paths.length === 0 || marking_ids.has(ws.id)}
+                        checked={all_selected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = !all_selected && some_selected
+                        }}
+                        onChange={() => toggle_select_all(ws.id, undone_paths)}
+                      />
+                    )}
                     {editing_id === ws.id ? (
                       <input
                         className="sidebar__rename"
@@ -300,7 +311,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                       </button>
                     </span>
                   </div>
-                  {selected_set.size > 0 && (
+                  {is_expanded && selected_set.size > 0 && (
                     <div className="sidebar__bulk">
                       <span>{selected_set.size}件選択中</span>
                       <button
@@ -328,6 +339,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                       nodes={nodes}
                       selected={selected_set}
                       on_toggle_select={(path) => toggle_select(ws.id, path)}
+                      disabled={marking_ids.has(ws.id)}
                     />
                   )}
                 </div>

@@ -270,6 +270,20 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().current).toBeNull()
   })
 
+  it('toggle_done は同名の【済】ファイルが既にあれば上書きせずエラーにする', async () => {
+    set_picker(create_mock_directory('notes', { 'a.md': '# A', '【済】a.md': '# done' }))
+    await useWorkspaceStore.getState().add_folder()
+    const ws = useWorkspaceStore.getState().workspaces[0]
+    const rename_spy = vi.spyOn(ws.workspace, 'rename_file')
+
+    await useWorkspaceStore.getState().toggle_done({ workspace_id: ws.id, path: 'a.md' })
+
+    expect(rename_spy).not.toHaveBeenCalled()
+    expect(useWorkspaceStore.getState().error).toBe('同名のファイルがあるため変更できませんでした')
+    // 元のファイルは残ったまま（上書きされていない）
+    expect(useWorkspaceStore.getState().workspaces[0].tree.filter((n) => n.name === 'a.md')).toHaveLength(1)
+  })
+
   it('mark_done は未済のみ【済】を付け、既に済のものはスキップし、build_tree はワークスペースごとに1回呼ぶ', async () => {
     set_picker(
       create_mock_directory('notes', { 'a.md': '# A', 'b.md': '# B', '【済】c.md': '# C' }),
@@ -334,6 +348,81 @@ describe('workspaceStore', () => {
     const state = useWorkspaceStore.getState()
     expect(state.error).toBe('ファイル名の変更に失敗しました（1件）')
     expect(state.workspaces[0].tree.some((n) => n.name === '【済】b.md')).toBe(true)
+  })
+
+  it('mark_done は同名の【済】ファイルが既にあればリネームせずスキップし、conflict件数を別メッセージで表示する', async () => {
+    set_picker(create_mock_directory('notes', { 'a.md': '# A', '【済】a.md': '# done' }))
+    await useWorkspaceStore.getState().add_folder()
+    const ws = useWorkspaceStore.getState().workspaces[0]
+    const rename_spy = vi.spyOn(ws.workspace, 'rename_file')
+
+    const result = await useWorkspaceStore
+      .getState()
+      .mark_done([{ workspace_id: ws.id, path: 'a.md' }])
+
+    expect(rename_spy).not.toHaveBeenCalled()
+    expect(result).toEqual({ done: [], failed: ['a.md'] })
+    expect(useWorkspaceStore.getState().error).toBe('同名のファイルがあるため変更できませんでした（1件）')
+    expect(useWorkspaceStore.getState().workspaces[0].tree.filter((n) => n.name === 'a.md')).toHaveLength(1)
+  })
+
+  it('mark_done は build_tree の後に last_modified を取得して current_mtime を更新する', async () => {
+    const order: string[] = []
+    const rename_file = vi.fn(async (_path: string, new_name: string) => new_name)
+    const build_tree = vi.fn(async () => {
+      order.push('build_tree')
+      return [{ kind: 'file' as const, name: '【済】a.md', path: '【済】a.md' }]
+    })
+    const last_modified = vi.fn(async () => {
+      order.push('last_modified')
+      return 999
+    })
+    useWorkspaceStore.setState({
+      workspaces: [
+        {
+          id: 'ws-x',
+          name: 'x',
+          label: '',
+          handle: {} as never,
+          workspace: { rename_file, build_tree, last_modified } as never,
+          tree: [{ kind: 'file', name: 'a.md', path: 'a.md' }],
+        },
+      ],
+      current: { workspace_id: 'ws-x', path: 'a.md' },
+      current_mtime: 1,
+    })
+
+    await useWorkspaceStore.getState().mark_done([{ workspace_id: 'ws-x', path: 'a.md' }])
+
+    expect(order).toEqual(['build_tree', 'last_modified'])
+    expect(useWorkspaceStore.getState().current_mtime).toBe(999)
+    expect(useWorkspaceStore.getState().current?.path).toBe('【済】a.md')
+  })
+
+  it('mark_done は build_tree に失敗すると専用メッセージにし、リネーム失敗件数に合算しない', async () => {
+    const rename_file = vi.fn(async (_path: string, new_name: string) => new_name)
+    const build_tree = vi.fn(async () => {
+      throw new Error('fail')
+    })
+    useWorkspaceStore.setState({
+      workspaces: [
+        {
+          id: 'ws-x',
+          name: 'x',
+          label: '',
+          handle: {} as never,
+          workspace: { rename_file, build_tree } as never,
+          tree: [{ kind: 'file', name: 'a.md', path: 'a.md' }],
+        },
+      ],
+    })
+
+    const result = await useWorkspaceStore
+      .getState()
+      .mark_done([{ workspace_id: 'ws-x', path: 'a.md' }])
+
+    expect(result).toEqual({ done: ['a.md'], failed: [] })
+    expect(useWorkspaceStore.getState().error).toBe('ファイル一覧の更新に失敗しました')
   })
 
   it('reload_folder でツリーを再走査して新規ファイルを反映する', async () => {
