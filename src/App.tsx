@@ -25,14 +25,23 @@ const SPLIT_KEY = 'lite-md:split'
 const COLLAPSE_KEY = 'lite-md:sidebar-collapsed'
 const VIEW_KEY = 'lite-md:view-mode'
 const HELP_SEEN_KEY = 'lite-md:help-seen'
+const SIDEBAR_WIDTH_KEY = 'lite-md:sidebar-width'
 const MIN_SPLIT = 0.15
 const MAX_SPLIT = 0.85
+const DEFAULT_SIDEBAR_WIDTH = 360
+const MIN_SIDEBAR_WIDTH = 180
+const MAX_SIDEBAR_WIDTH = 720
 
 type ViewMode = 'split' | 'preview'
 
 function read_split(): number {
   const value = Number(localStorage.getItem(SPLIT_KEY))
   return value >= MIN_SPLIT && value <= MAX_SPLIT ? value : 0.5
+}
+
+function read_sidebar_width(): number {
+  const value = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY))
+  return value >= MIN_SIDEBAR_WIDTH && value <= MAX_SIDEBAR_WIDTH ? value : DEFAULT_SIDEBAR_WIDTH
 }
 
 function read_collapsed(): boolean {
@@ -77,9 +86,11 @@ function App() {
   const [sidebar_collapsed, set_sidebar_collapsed] = useState(read_collapsed)
   const [view_mode, set_view_mode] = useState<ViewMode>(read_view_mode)
   const [split, set_split] = useState(read_split)
+  const [sidebar_width, set_sidebar_width] = useState(read_sidebar_width)
   const [editor_scroller, set_editor_scroller] = useState<HTMLElement | null>(null)
   const [preview_scroller, set_preview_scroller] = useState<HTMLDivElement | null>(null)
   const main_ref = useRef<HTMLElement>(null)
+  const body_ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     void useWorkspaceStore.getState().init()
@@ -113,6 +124,10 @@ function App() {
   }, [sidebar_collapsed])
 
   useEffect(() => {
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebar_width))
+  }, [sidebar_width])
+
+  useEffect(() => {
     localStorage.setItem(VIEW_KEY, view_mode)
   }, [view_mode])
 
@@ -137,14 +152,25 @@ function App() {
     }
   }
 
-  const start_drag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const handle_move = (move_event: PointerEvent) => {
-      const rect = main_ref.current?.getBoundingClientRect()
-      if (!rect || rect.width === 0) return
-      const ratio = (move_event.clientX - rect.left) / rect.width
-      set_split(Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, ratio)))
+  const clamp_sidebar_width = (value: number) =>
+    Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, Math.round(value)))
+
+  const on_sidebar_splitter_key = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      set_sidebar_width((value) => clamp_sidebar_width(value - 16))
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      set_sidebar_width((value) => clamp_sidebar_width(value + 16))
     }
+  }
+
+  // エディタ側とサイドバー側で「移動量→状態」の計算だけが異なるため、ドラッグの共通処理を分ける
+  const begin_pointer_drag = (
+    event: ReactPointerEvent<HTMLDivElement>,
+    handle_move: (move_event: PointerEvent) => void,
+  ) => {
+    event.preventDefault()
     const handle_up = () => {
       window.removeEventListener('pointermove', handle_move)
       window.removeEventListener('pointerup', handle_up)
@@ -157,10 +183,29 @@ function App() {
     window.addEventListener('pointerup', handle_up)
   }
 
+  const start_sidebar_drag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    begin_pointer_drag(event, (move_event) => {
+      const rect = body_ref.current?.getBoundingClientRect()
+      if (!rect) return
+      set_sidebar_width(clamp_sidebar_width(move_event.clientX - rect.left))
+    })
+  }
+
+  const start_drag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    begin_pointer_drag(event, (move_event) => {
+      const rect = main_ref.current?.getBoundingClientRect()
+      if (!rect || rect.width === 0) return
+      const ratio = (move_event.clientX - rect.left) / rect.width
+      set_split(Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, ratio)))
+    })
+  }
+
   const main_style = {
     '--editor-fr': `${split}fr`,
     '--preview-fr': `${1 - split}fr`,
   } as CSSProperties
+
+  const body_style = { '--sidebar-width': `${sidebar_width}px` } as CSSProperties
 
   return (
     <div className="app">
@@ -246,8 +291,22 @@ function App() {
         </div>
       )}
 
-      <div className="app__body">
+      <div className="app__body" ref={body_ref} style={body_style}>
         <Sidebar collapsed={sidebar_collapsed} />
+        {!sidebar_collapsed && (
+          <div
+            className="splitter splitter--sidebar"
+            role="separator"
+            tabIndex={0}
+            aria-orientation="vertical"
+            aria-label="サイドバーの幅を調整"
+            aria-valuemin={MIN_SIDEBAR_WIDTH}
+            aria-valuemax={MAX_SIDEBAR_WIDTH}
+            aria-valuenow={sidebar_width}
+            onPointerDown={start_sidebar_drag}
+            onKeyDown={on_sidebar_splitter_key}
+          />
+        )}
 
         <main
           className={`app__main${view_mode === 'preview' ? ' app__main--preview' : ''}`}

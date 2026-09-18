@@ -152,6 +152,12 @@ body {
   outline: none;
 }
 
+/* サイドバーは flex 配置なので grid の区切りと違い幅を明示する */
+.splitter--sidebar {
+  flex: 0 0 6px;
+  width: 6px;
+}
+
 /* プレビューのみモード: エディタと区切りを隠して1カラムに */
 .app__main--preview {
   grid-template-columns: 1fr;

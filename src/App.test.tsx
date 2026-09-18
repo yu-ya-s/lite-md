@@ -113,7 +113,7 @@ describe('App', () => {
 
   it('エディタとプレビューの間に区切り（separator）がある', () => {
     render(<App />)
-    expect(screen.getByRole('separator')).toBeInTheDocument()
+    expect(screen.getByRole('separator', { name: 'エディタとプレビューの幅を調整' })).toBeInTheDocument()
   })
 
   it('ファイルを開いていると保存ボタンが表示されクリックで保存する', () => {
@@ -174,7 +174,7 @@ describe('App', () => {
 
   it('区切りのドラッグでエディタ幅の比率が変わる', () => {
     render(<App />)
-    const separator = screen.getByRole('separator')
+    const separator = screen.getByRole('separator', { name: 'エディタとプレビューの幅を調整' })
     const main = separator.closest('.app__main') as HTMLElement
     main.getBoundingClientRect = () =>
       ({
@@ -197,12 +197,44 @@ describe('App', () => {
 
   it('区切りを矢印キーで操作してエディタ幅を変えられる', () => {
     render(<App />)
-    const separator = screen.getByRole('separator')
+    const separator = screen.getByRole('separator', { name: 'エディタとプレビューの幅を調整' })
     const main = separator.closest('.app__main') as HTMLElement
     const before = parseFloat(main.style.getPropertyValue('--editor-fr'))
     fireEvent.keyDown(separator, { key: 'ArrowLeft' })
     const after = parseFloat(main.style.getPropertyValue('--editor-fr'))
     expect(after).toBeLessThan(before)
+  })
+
+  it('サイドバーの区切りをドラッグするとサイドバー幅が変わり localStorage に保存される', () => {
+    render(<App />)
+    const separator = screen.getByRole('separator', { name: 'サイドバーの幅を調整' })
+    const body = separator.closest('.app__body') as HTMLElement
+    expect(body.style.getPropertyValue('--sidebar-width')).toBe('360px')
+    body.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 1000, height: 0, right: 1000, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect
+
+    fireEvent.pointerDown(separator)
+    fireEvent.pointerMove(window, { clientX: 250 })
+    fireEvent.pointerUp(window)
+    expect(body.style.getPropertyValue('--sidebar-width')).toBe('250px')
+    expect(localStorage.getItem('lite-md:sidebar-width')).toBe('250')
+
+    // 下限より小さくはならない
+    fireEvent.pointerDown(separator)
+    fireEvent.pointerMove(window, { clientX: 10 })
+    fireEvent.pointerUp(window)
+    expect(body.style.getPropertyValue('--sidebar-width')).toBe('180px')
+  })
+
+  it('サイドバーの区切りは矢印キーで操作でき、サイドバーを閉じると消える', () => {
+    render(<App />)
+    const separator = screen.getByRole('separator', { name: 'サイドバーの幅を調整' })
+    const body = separator.closest('.app__body') as HTMLElement
+    fireEvent.keyDown(separator, { key: 'ArrowRight' })
+    expect(body.style.getPropertyValue('--sidebar-width')).toBe('376px')
+
+    fireEvent.click(screen.getByRole('button', { name: 'サイドバーの表示切替' }))
+    expect(screen.queryByRole('separator', { name: 'サイドバーの幅を調整' })).not.toBeInTheDocument()
   })
 
   // テスト 12: 初回アクセスでツアーが自動表示される
