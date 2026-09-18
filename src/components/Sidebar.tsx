@@ -57,6 +57,10 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   const [selected_paths, set_selected_paths] = useState<Record<string, Set<string>>>({})
   // 「済にする」実行中のワークスペースID（連打防止のためボタンを disabled にする）
   const [marking_ids, set_marking_ids] = useState<Set<string>>(new Set())
+  // 「済にする」実行中の進捗（ワークスペースIDごとの完了件数/対象件数）
+  const [marking_progress, set_marking_progress] = useState<
+    Record<string, { done: number; total: number }>
+  >({})
 
   useEffect(() => {
     localStorage.setItem(HIDE_DONE_KEY, hide_done ? '1' : '0')
@@ -158,8 +162,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
   const handle_mark_done = async (ws_id: string, paths: string[]) => {
     set_marking_ids((prev) => new Set(prev).add(ws_id))
+    set_marking_progress((prev) => ({ ...prev, [ws_id]: { done: 0, total: paths.length } }))
     try {
-      const { done } = await mark_done(paths.map((path) => ({ workspace_id: ws_id, path })))
+      const { done } = await mark_done(
+        paths.map((path) => ({ workspace_id: ws_id, path })),
+        (done_count, total) => {
+          set_marking_progress((prev) => ({ ...prev, [ws_id]: { done: done_count, total } }))
+        },
+      )
       // 成功した分だけ選択から外す。失敗分は選択したまま残し、再実行できるようにする
       set_selected_paths((prev) => {
         const current_set = prev[ws_id]
@@ -175,6 +185,11 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       set_marking_ids((prev) => {
         const next = new Set(prev)
         next.delete(ws_id)
+        return next
+      })
+      set_marking_progress((prev) => {
+        const next = { ...prev }
+        delete next[ws_id]
         return next
       })
     }
@@ -313,7 +328,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                   </div>
                   {is_expanded && selected_set.size > 0 && (
                     <div className="sidebar__bulk">
-                      <span>{selected_set.size}件選択中</span>
+                      {marking_ids.has(ws.id) ? (
+                        <span className="sidebar__bulk-progress" role="status" aria-live="polite">
+                          <span className="sidebar__spinner" aria-hidden="true" />
+                          {`済にしています… ${marking_progress[ws.id]?.done ?? 0} / ${marking_progress[ws.id]?.total ?? selected_set.size} 件`}
+                        </span>
+                      ) : (
+                        <span>{selected_set.size}件選択中</span>
+                      )}
                       <button
                         type="button"
                         className="btn sidebar__bulk-done"

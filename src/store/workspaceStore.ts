@@ -96,7 +96,10 @@ type WorkspaceState = {
   open_text: (content: string) => void
   save: () => Promise<void>
   toggle_done: (target?: { workspace_id: string; path: string }) => Promise<void>
-  mark_done: (targets: { workspace_id: string; path: string }[]) => Promise<MarkDoneResult>
+  mark_done: (
+    targets: { workspace_id: string; path: string }[],
+    on_progress?: (done: number, total: number) => void,
+  ) => Promise<MarkDoneResult>
   reload_current: () => Promise<void>
   check_external_change: () => Promise<void>
   close_folder: (workspace_id: string) => Promise<void>
@@ -353,7 +356,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
       }
     },
 
-    mark_done: async (targets) => {
+    mark_done: async (targets, on_progress) => {
       if (targets.length === 0) return { done: [], failed: [] }
       const { workspaces, current } = get()
 
@@ -367,6 +370,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         }
       }
 
+      const total = targets.length
+      let processed = 0
+      // リネームの成功・スキップ・失敗いずれでも1件処理し終えるたびに通知する
+      // （件数が多いと画面が止まって見えるため、呼び出し元で進捗表示に使う）
+      const notify_progress = () => {
+        processed += 1
+        on_progress?.(processed, total)
+      }
+
       const done: string[] = []
       const failed: string[] = []
       let conflict_count = 0
@@ -377,6 +389,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         const ws = workspaces.find((w) => w.id === workspace_id)
         if (!ws) {
           failed.push(...paths)
+          paths.forEach(notify_progress)
           continue
         }
 
@@ -389,6 +402,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
           // 既に済のものは対象外（付け直さない）。既に望む状態なので成功扱いにする
           if (name.startsWith(DONE_PREFIX)) {
             done.push(path)
+            notify_progress()
             continue
           }
 
@@ -397,11 +411,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
             failed.push(path)
             if (result.reason === 'conflict') conflict_count += 1
             else rename_fail_count += 1
+            notify_progress()
             continue
           }
 
           changed = true
           done.push(path)
+          notify_progress()
           if (current?.workspace_id === workspace_id && current.path === path) {
             pending_current.push(result.new_path)
           }

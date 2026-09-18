@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { Sidebar } from './Sidebar'
 import { useWorkspaceStore, type LoadedWorkspace } from '../store/workspaceStore'
 
@@ -228,7 +228,10 @@ describe('Sidebar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'a.md を選択' }))
     fireEvent.click(screen.getByRole('button', { name: 'notes の選択したファイルを済にする' }))
-    expect(mark_done).toHaveBeenCalledWith([{ workspace_id: 'ws-1', path: 'a.md' }])
+    expect(mark_done).toHaveBeenCalledWith(
+      [{ workspace_id: 'ws-1', path: 'a.md' }],
+      expect.any(Function),
+    )
   })
 
   it('hide_done 中は非表示の【済】ファイルを全選択の対象に含めない', () => {
@@ -337,5 +340,41 @@ describe('Sidebar', () => {
     await waitFor(() =>
       expect(screen.queryByRole('checkbox', { name: 'a.md を選択' })).not.toBeDisabled(),
     )
+  })
+
+  it('「済にする」実行中は進捗とスピナーを表示し、完了後に消える', async () => {
+    let resolve_mark_done!: (value: { done: string[]; failed: string[] }) => void
+    let captured_on_progress: ((done: number, total: number) => void) | undefined
+    const mark_done = vi.fn(
+      (
+        _targets: { workspace_id: string; path: string }[],
+        on_progress?: (done: number, total: number) => void,
+      ) =>
+        new Promise<{ done: string[]; failed: string[] }>((resolve) => {
+          captured_on_progress = on_progress
+          resolve_mark_done = resolve
+        }),
+    )
+    useWorkspaceStore.setState({
+      is_supported: true,
+      mark_done,
+      workspaces: [
+        fake_workspace('ws-1', 'notes', [
+          { kind: 'file', name: 'a.md', path: 'a.md' },
+          { kind: 'file', name: 'b.md', path: 'b.md' },
+        ]),
+      ],
+    })
+    render(<Sidebar />)
+    fireEvent.click(screen.getByRole('button', { name: 'notes を展開する' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'a.md を選択' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'b.md を選択' }))
+    fireEvent.click(screen.getByRole('button', { name: 'notes の選択したファイルを済にする' }))
+
+    act(() => captured_on_progress?.(1, 2))
+    expect(screen.getByRole('status')).toHaveTextContent('済にしています… 1 / 2 件')
+
+    resolve_mark_done({ done: ['a.md', 'b.md'], failed: [] })
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
   })
 })

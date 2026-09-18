@@ -366,6 +366,29 @@ describe('workspaceStore', () => {
     expect(useWorkspaceStore.getState().workspaces[0].tree.filter((n) => n.name === 'a.md')).toHaveLength(1)
   })
 
+  it('mark_done は on_progress を対象件数分呼び、最後は (total, total) になる', async () => {
+    set_picker(
+      create_mock_directory('notes', { 'a.md': '# A', 'b.md': '# B', '【済】c.md': '# C' }),
+    )
+    await useWorkspaceStore.getState().add_folder()
+    const ws = useWorkspaceStore.getState().workspaces[0]
+    const on_progress = vi.fn()
+
+    await useWorkspaceStore.getState().mark_done(
+      [
+        { workspace_id: ws.id, path: 'a.md' },
+        { workspace_id: ws.id, path: 'b.md' },
+        { workspace_id: ws.id, path: '【済】c.md' },
+      ],
+      on_progress,
+    )
+
+    expect(on_progress).toHaveBeenCalledTimes(3)
+    expect(on_progress).toHaveBeenNthCalledWith(1, 1, 3)
+    expect(on_progress).toHaveBeenNthCalledWith(2, 2, 3)
+    expect(on_progress).toHaveBeenNthCalledWith(3, 3, 3)
+  })
+
   it('mark_done は build_tree の後に last_modified を取得して current_mtime を更新する', async () => {
     const order: string[] = []
     const rename_file = vi.fn(async (_path: string, new_name: string) => new_name)
